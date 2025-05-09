@@ -36,7 +36,7 @@
 
 ---
 
-# DodgeTracker Dodge List Tool
+# DodgeTracker
 
 ## Installation Guide
 1. Download and install **Pengu Loader** (requires version >= 1.1.6)
