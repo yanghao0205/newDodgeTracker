@@ -27,7 +27,7 @@
 ### 中文界面
 <img src="https://i.imgur.com/MV8aoZF.png" width="600" />  
 <img src="https://i.imgur.com/LsMOBvZ.png" width="400" />  
-<img src="https://i.imgur.com/iIAv7S.png" width="400" />  
+<img src="https://i.imgur.com/iIAvz7S.png" width="400" />  
 <img src="https://i.imgur.com/IRVVf51.png" width="400" />  
 <img src="https://i.imgur.com/k0pcQy1.png" width="400" />
 
