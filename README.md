@@ -1,7 +1,7 @@
 # DodgeTracker 躲避列表工具
 
 ## 安装指南
-1. 下载并安装 **Pengu Loader**（要求版本 >= 1.1.0）
+1. 下载并安装 **Pengu Loader**（要求版本 >= 1.1.6）
 2. 在[发布页面](https://github.com/yanghao0205/newDodgeTracker/releases/tag/DodgeTracker)下载 `newDodgeTracker.zip` 文件
 3. 将文件解压后放入客户端的 `plugins` 插件文件夹中
 
@@ -39,7 +39,7 @@
 # DodgeTracker Dodge List Tool
 
 ## Installation Guide
-1. Download and install **Pengu Loader** (requires version >= 1.1.0)
+1. Download and install **Pengu Loader** (requires version >= 1.1.6)
 2. Download the `newDodgeTracker.zip` file from the [Releases page](https://github.com/yanghao0205/newDodgeTracker/releases/tag/DodgeTracker)
 3. Extract the ZIP file into the client's `plugins` folder
 
