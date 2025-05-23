@@ -68,7 +68,7 @@ export function init(context) {
 
     context.socket.observe('/lol-gameflow/v1/gameflow-phase', async (data) => {
         if(data.data == "ChampSelect") {
-            await delay(10000)
+            await delay(20000)
     
             const players = await playersInLobby()
             const names = players // 包含所有玩家，包括自己

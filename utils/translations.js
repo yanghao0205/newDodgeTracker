@@ -64,6 +64,15 @@ const translations = {
         'update': 'Update',
         'cancel': 'Cancel',
         'selectTags': 'Select tags',
+        
+        // New import/export features
+        'pasteMethod': 'Paste Import',
+        'fileMethod': 'File Import',
+        'selectJsonFile': 'Select a file containing dodge list data',
+        'selectFile': 'Select File',
+        'noFileSelected': 'Please select a file',
+        'fileReadError': 'Failed to read file',
+        'exportSuccess': 'Dodge list exported to file successfully',
     },
     'zh_CN': {
         // UI Components
@@ -123,6 +132,15 @@ const translations = {
         'update': '更新',
         'cancel': '取消',
         'selectTags': '选择标签',
+        
+        // New import/export features
+        'pasteMethod': '粘贴导入',
+        'fileMethod': '文件导入',
+        'selectJsonFile': '选择包含躲避列表数据的文件',
+        'selectFile': '选择文件',
+        'noFileSelected': '请选择文件',
+        'fileReadError': '文件读取失败',
+        'exportSuccess': '躲避列表已成功导出到文件',
     }
 };
 
