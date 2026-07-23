@@ -1,5 +1,6 @@
 let uikit = undefined
 import { t } from './utils/translations.js';
+import { getAllTags, getTagDisplayLabel, addCustomTag, getCustomTags, cleanupUnusedCustomTags } from './utils/customTags.js';
 
 export function addButtonPostGame(context) {
     context.rcp.postInit('rcp-fe-lol-uikit', (api) => {
@@ -135,39 +136,60 @@ function showAddToDodgeListModal(playerName) {
     const dodgeList = DataStore.get('dodgelist-enhanced', []);
     const existingEntry = dodgeList.find(entry => entry.name.toLowerCase() === playerName.split('#')[0].toLowerCase());
     
-    // 标签列表 - 使用与增强版一致的标签
-    const tags = [
-        { value: 'toxic', label: t('toxic') },
-        { value: 'afk', label: t('afk') },
-        { value: 'troll', label: t('troll') },
-        { value: 'unskilled', label: t('unskilled') },
-        { value: 'mykiller', label: t('mykiller') }
-    ];
-    
-    // 创建标签复选框HTML
-    let tagsHtml = '';
-    tags.forEach(tag => {
-        const checked = existingEntry && existingEntry.tags && existingEntry.tags.includes(tag.value) ? 'checked' : '';
-        tagsHtml += `
-            <div style="margin-right: 10px; display: flex; align-items: center;">
-                <input type="checkbox" class="dodge-tag-checkbox" id="tag-${tag.value}" value="${tag.value}" ${checked}>
-                <label for="tag-${tag.value}" style="margin-left: 5px; color: #f0e6d2;">${tag.label}</label>
-            </div>
-        `;
-    });
-    
-    // 创建模态框HTML
+    // 创建模态框HTML（标签区留空，后续动态渲染）
     const modalHtml = `
-        <div style="width: 400px; padding: 20px; background-color: rgb(1, 10, 19); color: white; border: 1px solid #3c3c41;">
+        <div style="width: 420px; padding: 20px; background-color: rgb(1, 10, 19); color: white; border: 1px solid #3c3c41;">
             <h2 style="margin-bottom: 20px; color: #f0e6d2; font-size: 20px; text-align: center; font-weight: bold;">
                 ${t('dodgeNote')}: ${playerName}
             </h2>
             
-            <div style="margin-bottom: 15px;">
+            <div style="margin-bottom: 12px;">
                 <p style="margin-bottom: 10px;">${t('selectTags')}:</p>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    ${tagsHtml}
+                <div id="dodge-tags-container">
+                    <div id="dodge-preset-tags" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+                        <!-- preset tags rendered here -->
+                    </div>
+                    <div id="dodge-custom-area" style="display: none; margin-bottom: 8px;">
+                        <div id="dodge-custom-toggle" style="
+                            display: inline-flex;
+                            align-items: center;
+                            padding: 4px 10px;
+                            border: 1px dashed #3c3c41;
+                            border-radius: 12px;
+                            cursor: pointer;
+                            color: #a09b8c;
+                            font-size: 13px;
+                            user-select: none;
+                        ">
+                            ${t('customTags')} ▼
+                        </div>
+                        <div id="dodge-custom-tags" style="
+                            display: none;
+                            flex-wrap: wrap;
+                            gap: 8px;
+                            padding-left: 12px;
+                            margin-top: 8px;
+                            border-left: 2px solid #3c3c41;
+                        ">
+                            <!-- custom tags rendered here -->
+                        </div>
+                    </div>
                 </div>
+            </div>
+            
+            <div style="margin-bottom: 15px; display: flex; gap: 8px; align-items: center;">
+                <input type="text" id="new-custom-tag-input" placeholder="${t('tagNamePlaceholder')}" style="
+                    flex: 1;
+                    padding: 6px 10px;
+                    background-color: rgba(30, 35, 40, 0.8);
+                    color: white;
+                    border: 1px solid #3c3c41;
+                    border-radius: 2px;
+                    font-size: 13px;
+                ">
+                <button id="add-custom-tag-btn" style="padding: 6px 12px; background-color: #3c5a7c; color: white; border: none; border-radius: 2px; cursor: pointer; font-size: 13px;">
+                    ${t('addCustomTag')}
+                </button>
             </div>
             
             <div style="margin-bottom: 15px;">
@@ -203,13 +225,126 @@ function showAddToDodgeListModal(playerName) {
     `;
     document.body.appendChild(modalElement);
     
+    // 自定义标签展开状态
+    let customExpanded = false;
+
+    // 更新自定义标签区域展开/收起
+    function updateCustomExpand() {
+        const toggle = modalElement.querySelector('#dodge-custom-toggle');
+        const customContainer = modalElement.querySelector('#dodge-custom-tags');
+        if (!toggle || !customContainer) return;
+        customContainer.style.display = customExpanded ? 'flex' : 'none';
+        toggle.innerText = `${t('customTags')} ${customExpanded ? '▲' : '▼'}`;
+    }
+
+    // 渲染标签复选框
+    function renderTagCheckboxes() {
+        const allTags = getAllTags();
+        const presetContainer = modalElement.querySelector('#dodge-preset-tags');
+        const customArea = modalElement.querySelector('#dodge-custom-area');
+        const customContainer = modalElement.querySelector('#dodge-custom-tags');
+        if (!presetContainer || !customArea || !customContainer) return;
+
+        const presetTags = allTags.filter(tag => !tag.id.startsWith('custom_'));
+        const customTags = allTags.filter(tag => tag.id.startsWith('custom_'));
+
+        // 保留用户已勾选的标签，避免重渲染后丢失选择
+        const checkedIds = Array.from(modalElement.querySelectorAll('.dodge-tag-checkbox:checked'))
+            .map(checkbox => checkbox.value);
+        const fallbackChecked = existingEntry && existingEntry.tags ? existingEntry.tags : [];
+        const currentChecked = checkedIds.length > 0 ? checkedIds : fallbackChecked;
+
+        const createCheckboxHtml = (tag) => {
+            const checked = currentChecked.includes(tag.id) ? 'checked' : '';
+            return `
+                <div style="margin-right: 10px; display: flex; align-items: center;">
+                    <input type="checkbox" class="dodge-tag-checkbox" id="tag-${tag.id}" value="${tag.id}" ${checked}>
+                    <label for="tag-${tag.id}" style="margin-left: 5px; color: #f0e6d2;">${tag.label}</label>
+                </div>
+            `;
+        };
+
+        presetContainer.innerHTML = presetTags.map(createCheckboxHtml).join('');
+
+        if (customTags.length > 0) {
+            customArea.style.display = 'block';
+            customContainer.innerHTML = customTags.map(createCheckboxHtml).join('');
+        } else {
+            customArea.style.display = 'none';
+            customContainer.innerHTML = '';
+        }
+    }
+    
     // 等待DOM更新后添加事件监听器
     setTimeout(() => {
+        console.log('[DodgeTracker] Opening death note modal. existingEntry=', existingEntry, 'customTags=', getCustomTags());
+        renderTagCheckboxes();
+
+        // 如果该玩家已有自定义标签，默认展开自定义分组
+        if (existingEntry && existingEntry.tags && existingEntry.tags.some(tagId => String(tagId).startsWith('custom_'))) {
+            customExpanded = true;
+        }
+        updateCustomExpand();
+
+        // 自定义标签折叠/展开
+        const customToggle = modalElement.querySelector('#dodge-custom-toggle');
+        if (customToggle) {
+            customToggle.addEventListener('click', () => {
+                customExpanded = !customExpanded;
+                updateCustomExpand();
+            });
+        }
+
         // 取消按钮点击事件
         const cancelButton = document.getElementById('cancel-dodge-btn');
         if (cancelButton) {
             cancelButton.addEventListener('click', () => {
                 document.body.removeChild(modalElement);
+            });
+        }
+        
+        // 添加自定义标签按钮点击事件
+        const addCustomTagBtn = document.getElementById('add-custom-tag-btn');
+        const customTagInput = document.getElementById('new-custom-tag-input');
+        if (addCustomTagBtn && customTagInput) {
+            addCustomTagBtn.addEventListener('click', () => {
+                const label = customTagInput.value.trim();
+                if (!label) return;
+                
+                // 保存当前已勾选的标签（避免刷新后丢失用户选择）
+                const previouslyChecked = Array.from(modalElement.querySelectorAll('.dodge-tag-checkbox:checked'))
+                    .map(checkbox => checkbox.value);
+
+                // 创建前记录是否已有自定义标签，用于自动展开
+                const hadCustomTags = getCustomTags().length > 0;
+
+                const result = addCustomTag(label);
+                if (result.success) {
+                    customTagInput.value = '';
+                    renderTagCheckboxes();
+                    // 如果这是第一个自定义标签，自动展开让用户看到
+                    if (!hadCustomTags) {
+                        customExpanded = true;
+                    }
+                    updateCustomExpand();
+                    // 恢复之前已勾选的标签，并自动勾选新建的标签
+                    const allChecked = [...new Set([...previouslyChecked, result.id])];
+                    allChecked.forEach(tagId => {
+                        const checkbox = modalElement.querySelector(`#tag-${tagId}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                } else {
+                    const errorKey = result.error === 'empty' ? 'tagEmpty' : 'tagExists';
+                    leagueToast(t(errorKey));
+                }
+            });
+            
+            // 回车键也能添加
+            customTagInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomTagBtn.click();
+                }
             });
         }
         
@@ -240,6 +375,9 @@ function showAddToDodgeListModal(playerName) {
                     });
                     
                     DataStore.set('dodgelist-enhanced', updatedList);
+                    // Note: do not run cleanup here with force=true; save/update may happen
+                    // right after a locale switch while DataStore is still settling.
+                    // Unused tags are cleaned up when a player is actually removed or data is imported.
                     showSuccessToast(t('playerUpdated', playerName));
                 } else {
                     // 添加新条目
@@ -251,15 +389,16 @@ function showAddToDodgeListModal(playerName) {
                             note: note,
                             addedDate: new Date().toISOString()
                         };
-                        
+
                         dodgeList.push(newEntry);
                         DataStore.set('dodgelist-enhanced', dodgeList);
+                        // Note: do not run cleanup here with force=true; see update path above.
                         showSuccessToast(t('playerAdded', playerName));
                     } catch (e) {
                         console.error('Error parsing existing entry:', e);
                     }
                 }
-                
+
                 // 关闭模态框
                 document.body.removeChild(modalElement);
             });
@@ -369,14 +508,11 @@ function viewDodgeList() {
     // 添加列表内容
     listHtml += '<div style="max-height: 300px; overflow-y: auto;">';
     
-    // 标签映射
-    const tagLabels = {
-        'toxic': t('toxic'),
-        'afk': t('afk'),
-        'troll': t('troll'),
-        'unskilled': t('unskilled'),
-        'mykiller': t('mykiller')
-    };
+    // 标签映射 - 动态获取（预设+自定义）
+    const tagLabels = {};
+    getAllTags().forEach(tag => {
+        tagLabels[tag.id] = tag.label;
+    });
     
     // 遍历躲避列表
     dodgeList.forEach((player, index) => {
@@ -456,7 +592,10 @@ function viewDodgeList() {
                     const playerName = dodgeList[index].name;
                     dodgeList.splice(index, 1);
                     DataStore.set('dodgelist-enhanced', dodgeList);
-                    
+
+                    // Remove custom tags that are no longer used by any player
+                    cleanupUnusedCustomTags(true);
+
                     // 更新列表显示
                     closeDodgeListToast();
                     if (dodgeList.length > 0) {
@@ -510,8 +649,15 @@ function exportDodgeList() {
     }
     
     try {
+        // 包含自定义标签数据的导出格式
+        const exportData = {
+            version: 2,
+            players: dodgeList,
+            customTags: getCustomTags()
+        };
+        
         // 将数据转换为JSON字符串
-        const jsonData = JSON.stringify(dodgeList, null, 2);
+        const jsonData = JSON.stringify(exportData, null, 2);
         
         // 复制到剪贴板
         navigator.clipboard.writeText(jsonData)
@@ -597,15 +743,45 @@ function importDodgeList() {
                     
                     try {
                         const importedData = JSON.parse(jsonData);
-                        if (!Array.isArray(importedData)) {
+                        
+                        // Support both old format (array) and new format (object)
+                        let importedPlayers = [];
+                        let importedCustomTags = [];
+                        
+                        if (Array.isArray(importedData)) {
+                            // Old format: plain array of players
+                            importedPlayers = importedData;
+                        } else if (importedData && Array.isArray(importedData.players)) {
+                            // New format: { version, players, customTags }
+                            importedPlayers = importedData.players;
+                            importedCustomTags = importedData.customTags || [];
+                        } else {
                             leagueToast(t('importFailedFormat'));
                             return;
                         }
                         
                         // 验证数据格式
-                        const validData = importedData.filter(item => 
+                        const validData = importedPlayers.filter(item => 
                             item && typeof item === 'object' && item.name && item.tag
                         );
+                        
+                        // 合并自定义标签（避免重复）
+                        if (importedCustomTags.length > 0) {
+                            const existingCustomTags = getCustomTags();
+                            const existingIds = existingCustomTags.map(ct => ct.id);
+                            const existingLabels = existingCustomTags.map(ct => ct.label.toLowerCase());
+                            
+                            const newCustomTags = importedCustomTags.filter(ct => 
+                                ct && ct.id && ct.label && 
+                                !existingIds.includes(ct.id) && 
+                                !existingLabels.includes(ct.label.toLowerCase())
+                            );
+                            
+                            if (newCustomTags.length > 0) {
+                                const merged = [...existingCustomTags, ...newCustomTags];
+                                DataStore.set('dodgelist-custom-tags', merged);
+                            }
+                        }
                         
                         // 更新数据
                         DataStore.set('dodgelist-enhanced', validData);

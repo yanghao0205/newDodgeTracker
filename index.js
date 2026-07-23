@@ -4,6 +4,7 @@ import { createSettingsUi, createTabSettings } from "./uiSettings";
 import { addButtonPostGame } from "./uiPostGame";
 import { migrateDodgeListData } from './utils/dataMigration.js';
 import { initLocale, t } from './utils/translations.js';
+import { getTagDisplayLabel } from './utils/customTags.js';
 
 // 确保旧版和增强版躲避列表都存在
 if (!DataStore.get('dodgelist')) DataStore.set('dodgelist', [])
@@ -84,18 +85,9 @@ export function init(context) {
                 const tags = player.playerData.tags || [];
                 const note = player.playerData.note || '';
                 
-                // 标签映射（英文到中文）
-                const tagLabels = {
-                    'toxic': '有毒',
-                    'afk': '挂机',
-                    'troll': '捣乱',
-                    'unskilled': '技术差',
-                    'mykiller': '坑我'
-                };
-                
-                // 格式化标签（转换为中文）
+                // 格式化标签（动态获取标签显示名称，支持自定义标签）
                 const tagsText = tags.length > 0 
-                    ? `[${t('tagsLabel', tags.map(tag => t(tag)).join(', '))}]` 
+                    ? `[${t('tagsLabel', tags.map(tag => getTagDisplayLabel(tag)).join(', '))}]` 
                     : '';
                 
                 // 格式化备注

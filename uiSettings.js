@@ -21,6 +21,7 @@ export function createTabSettings(context) {
 
     context.rcp.postInit('rcp-fe-lol-settings', async (api) => {
         window.__RCP_SETTINGS_API = api
+        window.__RCP_SETTINGS_MODAL_MANAGER = api._modalManager
 
         let ember_api = window.__RCP_EMBER_API
         let ember = await ember_api.getEmber()
@@ -141,4 +142,19 @@ export function createSettingsUi() {
             })
         }
     },500)
+}
+
+/**
+ * Force the settings window title and sidebar categories to re-render
+ * with the current locale. Call this after changing the language.
+ */
+export function refreshSettingsCategories() {
+    try {
+        const modalManager = window.__RCP_SETTINGS_MODAL_MANAGER;
+        if (modalManager && typeof modalManager._refreshCategoryGroups === 'function') {
+            modalManager._refreshCategoryGroups();
+        }
+    } catch (e) {
+        console.error('[DodgeTracker] Failed to refresh settings categories:', e);
+    }
 }

@@ -1,6 +1,7 @@
 import { UI } from '../ui/components.js';
 import { COLORS } from './styles.js';
-import { t, getTagLabel } from '../utils/translations.js';
+import { t } from '../utils/translations.js';
+import { getAllTags, getTagDisplayLabel, addCustomTag, getCustomTags, cleanupUnusedCustomTags, PRESET_TAGS } from '../utils/customTags.js';
 
 export class DodgeListModal {
     constructor() {
@@ -88,29 +89,71 @@ export class DodgeListModal {
         `;
         searchContainer.appendChild(this.searchInput);
 
-        // Tag selection container
-        const tagContainer = document.createElement('div');
-        tagContainer.style.cssText = `
+        // Tag filter section
+        const tagFilterSection = document.createElement('div');
+        tagFilterSection.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 8px;
+        `;
+
+        // Preset tags row (always visible)
+        const presetTagRow = document.createElement('div');
+        presetTagRow.style.cssText = `
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-bottom: 16px;
+            align-items: center;
         `;
+        tagFilterSection.appendChild(presetTagRow);
 
-        // Tag list, including filter functionality
-        const tags = [
-            { value: 'all', label: t('all'), type: 'filter' },
-            { value: 'toxic', label: t('toxic'), type: 'filter' },
-            { value: 'afk', label: t('afk'), type: 'filter' },
-            { value: 'troll', label: t('troll'), type: 'filter' },
-            { value: 'unskilled', label: t('unskilled'), type: 'filter' },
-            { value: 'mykiller', label: t('mykiller'), type: 'filter' }
-        ];
+        // Custom tags expandable row
+        const customTagRow = document.createElement('div');
+        customTagRow.style.cssText = `
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-left: 12px;
+            border-left: 2px solid ${COLORS.border};
+        `;
+        tagFilterSection.appendChild(customTagRow);
 
-        tags.forEach(tag => {
+        const customTags = getCustomTags();
+        let customDropdownBtn = null;
+
+        // Helper to update all tag button styles
+        const updateTagBtnStyles = () => {
+            tagFilterSection.querySelectorAll('.tag-btn').forEach(btn => {
+                const btnValue = btn.dataset.value;
+                if (btnValue === this.currentFilter) {
+                    btn.style.background = COLORS.highlight;
+                    btn.style.color = COLORS.text;
+                } else {
+                    btn.style.background = COLORS.background;
+                    btn.style.color = COLORS.text;
+                }
+            });
+
+            // Highlight custom dropdown if a custom tag is selected
+            if (customDropdownBtn) {
+                const isCustomSelected = customTags.some(ct => ct.id === this.currentFilter);
+                if (isCustomSelected) {
+                    customDropdownBtn.style.background = COLORS.highlight;
+                    customDropdownBtn.style.color = COLORS.text;
+                } else {
+                    customDropdownBtn.style.background = COLORS.background;
+                    customDropdownBtn.style.color = COLORS.text;
+                }
+            }
+        };
+
+        // Helper to create a tag button
+        const createTagButton = (tag, container) => {
             const tagBtn = document.createElement('div');
             tagBtn.className = 'tag-btn';
             tagBtn.innerText = tag.label;
+            tagBtn.dataset.value = tag.value;
             tagBtn.style.cssText = `
                 padding: 6px 12px;
                 border-radius: 12px;
@@ -120,39 +163,57 @@ export class DodgeListModal {
                 color: ${COLORS.text};
                 transition: all 0.2s ease;
             `;
-            
+
             tagBtn.onclick = () => {
-                // Update current filter status
                 this.currentFilter = tag.value;
-                
-                // Update all button styles
-                tagContainer.querySelectorAll('.tag-btn').forEach(btn => {
-                    const btnValue = btn.dataset.value;
-                    if (btnValue === this.currentFilter) {
-                        btn.style.background = COLORS.highlight;
-                        btn.style.color = COLORS.text;
-                    } else {
-                        btn.style.background = COLORS.background;
-                        btn.style.color = COLORS.text;
-                    }
-                });
-                
-                // Filter and render the list
+                updateTagBtnStyles();
                 this.filterList(tag.value);
             };
-            
-            // Set data attribute for value
-            tagBtn.dataset.value = tag.value;
-            
-            // Set initial selected style
-            if (tag.value === this.currentFilter) {
-                tagBtn.style.background = COLORS.highlight;
-            }
-            
-            tagContainer.appendChild(tagBtn);
-        });
-        
-        searchContainer.appendChild(tagContainer);
+
+            container.appendChild(tagBtn);
+            return tagBtn;
+        };
+
+        // Preset tags: All + afk, troll, unskilled, mykiller
+        const presetTags = [
+            { value: 'all', label: t('all') },
+            ...PRESET_TAGS.map(id => ({ value: id, label: t(id) }))
+        ];
+        presetTags.forEach(tag => createTagButton(tag, presetTagRow));
+
+        // Custom tags dropdown button
+        if (customTags.length > 0) {
+            customDropdownBtn = document.createElement('div');
+            customDropdownBtn.className = 'tag-btn custom-dropdown-btn';
+            customDropdownBtn.innerText = t('customTags') + ' ▼';
+            customDropdownBtn.dataset.value = '__custom_group__';
+            customDropdownBtn.style.cssText = `
+                padding: 6px 12px;
+                border-radius: 12px;
+                cursor: pointer;
+                background: ${COLORS.background};
+                border: 1px dashed ${COLORS.border};
+                color: ${COLORS.textSecondary};
+                transition: all 0.2s ease;
+            `;
+
+            customDropdownBtn.onclick = () => {
+                const isExpanded = customTagRow.style.display === 'flex';
+                customTagRow.style.display = isExpanded ? 'none' : 'flex';
+                customDropdownBtn.innerText = t('customTags') + (isExpanded ? ' ▼' : ' ▲');
+            };
+
+            presetTagRow.appendChild(customDropdownBtn);
+
+            // Custom tag buttons
+            customTags.forEach(tag => {
+                createTagButton({ value: tag.id, label: tag.label }, customTagRow);
+            });
+        }
+
+        updateTagBtnStyles();
+
+        searchContainer.appendChild(tagFilterSection);
         this.modal.appendChild(searchContainer);
 
         // Player list container
@@ -272,7 +333,7 @@ export class DodgeListModal {
             
             playerItem.appendChild(nameContainer);
             
-            // Tags container
+            // Tags container - 只显示已添加的标签
             const tagsContainer = document.createElement('div');
             tagsContainer.style.cssText = `
                 display: flex;
@@ -281,60 +342,55 @@ export class DodgeListModal {
                 margin-right: 8px;
             `;
             
-            // Available tags
-            const availableTags = ['toxic', 'afk', 'troll', 'unskilled', 'mykiller'];
-            
-            availableTags.forEach(tagValue => {
-                const tagElement = document.createElement('div');
-                tagElement.innerText = t(tagValue);
-                tagElement.style.cssText = `
-                    padding: 2px 8px;
-                    border-radius: 10px;
-                    font-size: 12px;
-                    cursor: pointer;
-                    background: ${player.tags && player.tags.includes(tagValue) ? COLORS.highlight : COLORS.background};
-                    border: 1px solid ${COLORS.border};
-                    color: ${COLORS.text};
-                `;
-                
-                tagElement.onclick = () => {
-                    const players = DataStore.get('dodgelist-enhanced', []);
-                    const playerIndex = players.findIndex(p => p.name === player.name);
-                    
-                    if (playerIndex === -1) return;
-                    
-                    if (!players[playerIndex].tags) {
-                        players[playerIndex].tags = [];
-                    }
-                    
-                    const tagIndex = players[playerIndex].tags.indexOf(tagValue);
-                    
-                    if (tagIndex === -1) {
-                        players[playerIndex].tags.push(tagValue);
-                    } else {
-                        players[playerIndex].tags.splice(tagIndex, 1);
-                    }
-                    DataStore.set('dodgelist-enhanced', players);
-                    this.renderPlayerList(players);
-                };
-                tagsContainer.appendChild(tagElement);
-            });
+            const playerTags = player.tags || [];
+            if (playerTags.length > 0) {
+                playerTags.forEach(tagValue => {
+                    const tagElement = document.createElement('div');
+                    tagElement.innerText = getTagDisplayLabel(tagValue);
+                    tagElement.style.cssText = `
+                        padding: 2px 8px;
+                        border-radius: 10px;
+                        font-size: 12px;
+                        background: ${COLORS.highlight};
+                        border: 1px solid ${COLORS.border};
+                        color: ${COLORS.text};
+                    `;
+                    tagsContainer.appendChild(tagElement);
+                });
+            }
             playerItem.appendChild(tagsContainer);
+
+            // Button group - 备注、管理标签、移除始终在一行
+            const buttonGroup = document.createElement('div');
+            buttonGroup.style.cssText = `
+                display: flex;
+                align-items: center;
+                flex-wrap: nowrap;
+                gap: 6px;
+            `;
 
             // Note button
             const noteBtn = document.createElement('lol-uikit-flat-button-secondary');
-            noteBtn.style.minWidth = '80px';
+            noteBtn.style.minWidth = '60px';
             noteBtn.innerText = t('note');
             noteBtn.onclick = () => this.showNoteModal(player);
-            playerItem.appendChild(noteBtn);
+            buttonGroup.appendChild(noteBtn);
+
+            // Manage tags button
+            const manageTagsBtn = document.createElement('lol-uikit-flat-button-secondary');
+            manageTagsBtn.style.minWidth = '70px';
+            manageTagsBtn.innerText = t('manageTags');
+            manageTagsBtn.onclick = () => this.showManagePlayerTagsModal(player);
+            buttonGroup.appendChild(manageTagsBtn);
 
             // Remove button
             const removeBtn = document.createElement('lol-uikit-flat-button-secondary');
-            removeBtn.style.minWidth = '80px';
+            removeBtn.style.minWidth = '60px';
             removeBtn.innerText = t('remove');
             removeBtn.onclick = () => this.removePlayer(player);
-            playerItem.appendChild(removeBtn);
+            buttonGroup.appendChild(removeBtn);
 
+            playerItem.appendChild(buttonGroup);
             this.listContainer.appendChild(playerItem);
         });
     }
@@ -404,8 +460,196 @@ export class DodgeListModal {
             p => p.name !== player.name
         );
         DataStore.set('dodgelist-enhanced', updatedList);
+
+        // Remove custom tags that are no longer used by any player
+        cleanupUnusedCustomTags(true);
+
+        // If current filter is a custom tag that no longer exists, reset to 'all'
+        const allCustomTagIds = new Set(getCustomTags().map(ct => ct.id));
+        if (this.currentFilter !== 'all' && !PRESET_TAGS.includes(this.currentFilter) && !allCustomTagIds.has(this.currentFilter)) {
+            this.currentFilter = 'all';
+        }
+
         Toast.success(t('playerRemoved', player.name));
-        this.renderPlayerList(updatedList);
+
+        // Re-open the list to refresh filters and player list
+        this.close();
+        this.show();
+    }
+
+    showManagePlayerTagsModal(player) {
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: ${COLORS.background};
+            border: 2px solid ${COLORS.border};
+            border-radius: 4px;
+            padding: 16px;
+            width: 360px;
+            z-index: 10000;
+            color: ${COLORS.text};
+            animation: fadeIn 0.3s ease-in;
+        `;
+
+        const title = document.createElement('h3');
+        title.innerText = t('manageTags') + ': ' + player.name + (player.tag ? '#' + player.tag : '');
+        title.style.cssText = `
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            text-align: center;
+            color: ${COLORS.highlight};
+        `;
+        modal.appendChild(title);
+
+        // Tags container
+        const tagsContainer = document.createElement('div');
+        tagsContainer.id = 'manage-player-tags-container';
+        tagsContainer.style.cssText = `
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        `;
+        modal.appendChild(tagsContainer);
+
+        // Render tag checkboxes
+        const renderTags = () => {
+            const allTags = getAllTags();
+            const playerTags = player.tags || [];
+            tagsContainer.innerHTML = '';
+
+            allTags.forEach(tag => {
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = `
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                `;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `manage-tag-${tag.id}`;
+                checkbox.value = tag.id;
+                checkbox.checked = playerTags.includes(tag.id);
+                checkbox.style.cssText = `
+                    width: 14px;
+                    height: 14px;
+                    cursor: pointer;
+                `;
+
+                const label = document.createElement('label');
+                label.htmlFor = `manage-tag-${tag.id}`;
+                label.innerText = tag.label;
+                label.style.cssText = `
+                    color: ${COLORS.text};
+                    font-size: 13px;
+                    cursor: pointer;
+                `;
+
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                tagsContainer.appendChild(wrapper);
+            });
+        };
+        renderTags();
+
+        // Add custom tag row
+        const addRow = document.createElement('div');
+        addRow.style.cssText = `
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        `;
+
+        const tagInput = document.createElement('input');
+        tagInput.type = 'text';
+        tagInput.placeholder = t('tagNamePlaceholder');
+        tagInput.style.cssText = `
+            flex: 1;
+            padding: 6px 8px;
+            background: ${COLORS.background};
+            border: 1px solid ${COLORS.border};
+            color: ${COLORS.text};
+            border-radius: 4px;
+        `;
+        addRow.appendChild(tagInput);
+
+        const addBtn = document.createElement('lol-uikit-flat-button');
+        addBtn.innerText = t('addCustomTag');
+        addBtn.style.minWidth = '80px';
+        addBtn.onclick = () => {
+            const label = tagInput.value.trim();
+            if (!label) {
+                Toast.error(t('tagEmpty'));
+                return;
+            }
+            const result = addCustomTag(label);
+            if (result.success) {
+                tagInput.value = '';
+                renderTags();
+                // Auto-check the newly created tag
+                const newCheckbox = modal.querySelector(`#manage-tag-${result.id}`);
+                if (newCheckbox) newCheckbox.checked = true;
+            } else if (result.error === 'exists') {
+                Toast.error(t('tagExists'));
+            }
+        };
+        addRow.appendChild(addBtn);
+        modal.appendChild(addRow);
+
+        // Enter key support
+        tagInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addBtn.click();
+            }
+        });
+
+        // Buttons container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        `;
+
+        // Cancel button
+        const cancelBtn = document.createElement('lol-uikit-flat-button-secondary');
+        cancelBtn.style.flex = '1';
+        cancelBtn.innerText = t('cancel');
+        cancelBtn.onclick = () => {
+            document.body.removeChild(modal);
+        };
+        buttonContainer.appendChild(cancelBtn);
+
+        // Save button
+        const saveBtn = document.createElement('lol-uikit-flat-button');
+        saveBtn.style.flex = '1';
+        saveBtn.innerText = t('save');
+        saveBtn.onclick = () => {
+            const selectedTags = Array.from(modal.querySelectorAll('#manage-player-tags-container input[type="checkbox"]:checked'))
+                .map(checkbox => checkbox.value);
+
+            const updatedList = DataStore.get('dodgelist-enhanced', []).map(p => {
+                if (p.name === player.name) {
+                    return { ...p, tags: selectedTags };
+                }
+                return p;
+            });
+
+            DataStore.set('dodgelist-enhanced', updatedList);
+            Toast.success(t('tagsUpdated'));
+            document.body.removeChild(modal);
+            this.renderPlayerList(updatedList);
+        };
+        buttonContainer.appendChild(saveBtn);
+
+        modal.appendChild(buttonContainer);
+
+        document.body.appendChild(modal);
     }
 
     close() {
@@ -428,8 +672,15 @@ export class DodgeListModal {
                 return;
             }
             
+            // 包含自定义标签数据的导出格式
+            const exportData = {
+                version: 2,
+                players: dodgeList,
+                customTags: getCustomTags()
+            };
+            
             // 转换为JSON字符串
-            const jsonData = JSON.stringify(dodgeList, null, 2);
+            const jsonData = JSON.stringify(exportData, null, 2);
             
             // 创建Blob对象
             const blob = new Blob([jsonData], { type: 'text/plain;charset=utf-8' });
@@ -674,26 +925,60 @@ export class DodgeListModal {
             
             try {
                 const importedData = JSON.parse(jsonData);
-                if (!Array.isArray(importedData)) {
+                
+                // Support both old format (array) and new format (object with version/players/customTags)
+                let importedPlayers = [];
+                let importedCustomTags = [];
+                
+                if (Array.isArray(importedData)) {
+                    // Old format: plain array of players
+                    importedPlayers = importedData;
+                } else if (importedData && Array.isArray(importedData.players)) {
+                    // New format: { version, players, customTags }
+                    importedPlayers = importedData.players;
+                    importedCustomTags = importedData.customTags || [];
+                } else {
                     Toast.error(t('importFailedFormat'));
                     return;
                 }
                 
                 // 验证数据格式
-                const validData = importedData.filter(item => 
+                const validData = importedPlayers.filter(item => 
                     item && typeof item === 'object' && item.name && item.tag
                 );
                 
+                // 合并自定义标签（避免重复）
+                if (importedCustomTags.length > 0) {
+                    const existingCustomTags = getCustomTags();
+                    const existingIds = existingCustomTags.map(ct => ct.id);
+                    const existingLabels = existingCustomTags.map(ct => ct.label.toLowerCase());
+                    
+                    const newCustomTags = importedCustomTags.filter(ct => 
+                        ct && ct.id && ct.label && 
+                        !existingIds.includes(ct.id) && 
+                        !existingLabels.includes(ct.label.toLowerCase())
+                    );
+                    
+                    if (newCustomTags.length > 0) {
+                        const merged = [...existingCustomTags, ...newCustomTags];
+                        DataStore.set('dodgelist-custom-tags', merged);
+                    }
+                }
+                
                 // 更新数据
                 DataStore.set('dodgelist-enhanced', validData);
-                
+
+                // Clean up custom tags that are no longer used
+                cleanupUnusedCustomTags(true);
+
                 // 关闭导入对话框
                 document.body.removeChild(importModal);
-                
+
                 Toast.success(t('importSuccess', validData.length));
-                
-                // 刷新列表显示
-                this.renderPlayerList(validData);
+
+                // Re-open the list to refresh filters and player list
+                this.close();
+                this.show();
             } catch (e) {
                 console.error('导入数据解析失败:', e);
                 Toast.error(t('importFailed'));
