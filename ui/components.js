@@ -2,6 +2,7 @@ import { DodgeListModal } from './dodgeListModal.js';
 import { t, getSupportedLocalesWithNames, getManualLocale, setManualLocale } from '../utils/translations.js';
 import { refreshSettingsCategories } from '../uiSettings.js';
 import { COLORS } from './styles.js';
+import { isSummonerRevealEnabled, setSummonerRevealEnabled, removeRevealSidebar } from '../summonerReveal.js';
 
 export const dodgeListModal = new DodgeListModal();
 
@@ -48,6 +49,7 @@ function renderSettingsPanel(panel) {
     const locales = getSupportedLocalesWithNames();
     const manualLocale = getManualLocale();
     const currentSel = manualLocale || 'auto';
+    const srEnabled = isSummonerRevealEnabled();
 
     // 使用innerHTML来添加设置
     panel.innerHTML = `
@@ -82,6 +84,18 @@ function renderSettingsPanel(panel) {
                     <option value="auto"${currentSel === 'auto' ? ' selected' : ''}>${t('autoDetect')}</option>
                     ${locales.map(l => `<option value="${l.code}"${currentSel === l.code ? ' selected' : ''}>${l.name}</option>`).join('')}
                 </select>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 16px; align-items: center;">
+            <div style="flex: 1;">
+                <div class="label">${t('summonerRevealEnabled')}</div>
+                <div style="font-size: 12px; color: #a09b8c; margin-top: 4px;">${t('summonerRevealDesc')}</div>
+            </div>
+            <div style="position: relative; width: 48px; height: 24px;">
+                <input type="checkbox" id="summoner-reveal-toggle" ${srEnabled ? 'checked' : ''} style="opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; z-index: 2;">
+                <div id="sr-toggle-bg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: ${srEnabled ? '#039714' : '#3a3a3a'}; border-radius: 12px; transition: background 0.2s; pointer-events: none;">
+                    <div style="position: absolute; top: 2px; left: ${srEnabled ? '26px' : '2px'}; width: 20px; height: 20px; background: #f0e6d2; border-radius: 50%; transition: left 0.2s;"></div>
+                </div>
             </div>
         </div>
     `;
@@ -136,6 +150,23 @@ function renderSettingsPanel(panel) {
         refreshSettingsCategories();
         // Re-render the panel with new language
         renderSettingsPanel(panel);
+    };
+
+    // Summoner Reveal toggle
+    const srToggle = panel.querySelector('#summoner-reveal-toggle');
+    const srToggleBg = panel.querySelector('#sr-toggle-bg');
+    srToggle.onchange = () => {
+        const enabled = srToggle.checked;
+        setSummonerRevealEnabled(enabled);
+        // Update toggle visual
+        srToggleBg.style.background = enabled ? '#039714' : '#3a3a3a';
+        const knob = srToggleBg.querySelector('div');
+        knob.style.left = enabled ? '26px' : '2px';
+        // If disabled while an eye icon/sidebar exists, remove it immediately
+        if (!enabled) {
+            removeRevealSidebar();
+        }
+        console.log('[DodgeTracker] Summoner Reveal:', enabled ? 'enabled' : 'disabled');
     };
 }
 

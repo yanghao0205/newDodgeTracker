@@ -5,6 +5,7 @@ import { addButtonPostGame } from "./uiPostGame";
 import { migrateDodgeListData } from './utils/dataMigration.js';
 import { initLocale, t } from './utils/translations.js';
 import { getTagDisplayLabel } from './utils/customTags.js';
+import { isSummonerRevealEnabled, handleChampionSelectReveal, removeRevealSidebar } from './summonerReveal.js';
 
 // 确保旧版和增强版躲避列表都存在
 if (!DataStore.get('dodgelist')) DataStore.set('dodgelist', [])
@@ -45,9 +46,50 @@ function isInMyTeam(currentQueue) {
 }
 
 /**
+ * Fetch summoner data by IDs with fallbacks.
+ * Primary: batch v2 endpoint. Fallback: individual v1 endpoint per ID.
+ */
+async function getSummonersByIds(summonerIds) {
+    // Primary: batch v2 endpoint
+    try {
+        const idsParam = summonerIds.join(',')
+        const result = await create("get", `/lol-summoner/v2/summoners?ids=${idsParam}`)
+        if (result && Array.isArray(result) && result.length > 0) {
+            console.log('[DodgeTracker] getSummonersByIds: v2 batch succeeded')
+            return result
+        }
+    } catch (error) {
+        console.warn('[DodgeTracker] getSummonersByIds: v2 batch failed:', error.message)
+    }
+
+    // Fallback: fetch each summoner individually via v1 endpoint
+    console.log('[DodgeTracker] getSummonersByIds: falling back to v1 individual lookups')
+    const summoners = []
+    for (const id of summonerIds) {
+        try {
+            const summoner = await create("get", `/lol-summoner/v1/summoners/${id}`)
+            if (summoner) {
+                summoners.push(summoner)
+            }
+        } catch (error) {
+            console.warn(`[DodgeTracker] getSummonersByIds: v1 lookup failed for id ${id}:`, error.message)
+        }
+    }
+
+    if (summoners.length > 0) {
+        console.log('[DodgeTracker] getSummonersByIds: v1 individual lookups returned', summoners.length, 'results')
+        return summoners
+    }
+
+    console.warn('[DodgeTracker] getSummonersByIds: all lookups failed')
+    return null
+}
+
+/**
  * PRIMARY method: get players from LCU Champ Select session API
  * Works on all Pengu Loader versions (uses standard /lol- endpoints)
  * Includes both myTeam and theirTeam
+ * Returns { names: [...], summoners: [...] } or null
  */
 async function playersFromChampSelect() {
     try {
@@ -75,8 +117,7 @@ async function playersFromChampSelect() {
         console.log('[DodgeTracker] playersFromChampSelect: found', summonerIds.length, 'summoner IDs:', summonerIds)
 
         // Fetch summoner data to get game names and tags
-        const idsParam = summonerIds.join(',')
-        const summoners = await create("get", `/lol-summoner/v2/summoners?ids=${idsParam}`)
+        const summoners = await getSummonersByIds(summonerIds)
 
         if (!summoners || !Array.isArray(summoners)) {
             console.warn('[DodgeTracker] playersFromChampSelect: summoners fetch returned null')
@@ -85,7 +126,7 @@ async function playersFromChampSelect() {
 
         const names = summoners.map(s => s.gameName + "#" + s.tagLine)
         console.log('[DodgeTracker] playersFromChampSelect (primary):', names)
-        return names
+        return { names, summoners }
     } catch (error) {
         console.error('[DodgeTracker] playersFromChampSelect error:', error)
         return null
@@ -151,17 +192,59 @@ export function init(context) {
         const phase = data?.data
         console.log('[DodgeTracker] gameflow phase changed:', phase)
 
+        // Clean up Summoner Reveal sidebar when leaving champ select
+        if (phase !== "ChampSelect") {
+            removeRevealSidebar()
+        }
+
         if(phase == "ChampSelect") {
             try {
-                await delay(20000)
-                console.log('[DodgeTracker] ChampSelect detected, fetching players...')
+                console.log('[DodgeTracker] ChampSelect detected, polling for players & chat...')
 
-                // PRIMARY: LCU Champ Select session API (works on all Pengu versions)
-                let players = await playersFromChampSelect()
+                // Poll every 1s instead of fixed 20s delay
+                // Proceed as soon as both players and chat are ready
+                let players = null
+                let champSelectSummoners = null
+                let chatInfo = null
+                let lastPlayerCount = 0
+                let stableCount = 0
+                const maxWait = 20000
+                const pollInterval = 1000
+                let elapsed = 0
 
-                // SECONDARY: Riot Client chat API (may not work on Pengu v1.2)
+                while (elapsed < maxWait) {
+                    await delay(pollInterval)
+                    elapsed += pollInterval
+
+                    // Try to get players from champ select session
+                    const result = await playersFromChampSelect()
+                    if (result && result.names && result.names.length > 0) {
+                        // Track if player count has stabilized
+                        if (result.names.length === lastPlayerCount) {
+                            stableCount++
+                        } else {
+                            stableCount = 0
+                        }
+                        lastPlayerCount = result.names.length
+                        players = result.names
+                        champSelectSummoners = result.summoners
+
+                        // Also try to get chat info
+                        if (!chatInfo) {
+                            chatInfo = await getChampionSelectChatInfo()
+                        }
+
+                        // Proceed once players are stable (2 consecutive same counts) and chat is ready
+                        if (stableCount >= 1 && chatInfo) {
+                            console.log(`[DodgeTracker] Ready after ${elapsed}ms — ${result.names.length} players, chat OK`)
+                            break
+                        }
+                    }
+                }
+
+                // Fallback: try secondary method if primary never got players
                 if (!players || players.length === 0) {
-                    console.log('[DodgeTracker] Primary method failed or empty, trying secondary (chat API)...')
+                    console.log('[DodgeTracker] Primary method timed out, trying secondary (chat API)...')
                     players = await playersInLobby()
                 }
 
@@ -172,14 +255,25 @@ export function init(context) {
 
                 console.log('[DodgeTracker] Players in lobby:', players)
 
-                const list = isInMyTeam(players)
-
-                const chatInfo = await getChampionSelectChatInfo();
+                // Retry chat info if not yet obtained
+                if (!chatInfo) {
+                    chatInfo = await getChampionSelectChatInfo()
+                }
 
                 if (!chatInfo) {
                     console.error('[DodgeTracker] Could not get champion select chat info, cannot post messages')
                     return
                 }
+
+                // --- Summoner Reveal (eye icon sidebar) ---
+                // Fire and forget — don't block DodgeTracker alerts
+                if (isSummonerRevealEnabled() && champSelectSummoners) {
+                    console.log('[DodgeTracker] Summoner Reveal enabled, starting sidebar...')
+                    handleChampionSelectReveal(champSelectSummoners, chatInfo)
+                }
+
+                // --- DodgeTracker alerts ---
+                const list = isInMyTeam(players)
 
                 if (list.length === 0) {
                     console.log('[DodgeTracker] No dodged players detected in this team')

@@ -88,6 +88,8 @@ const translations = {
         // Language selector
         'languageLabel': 'Language',
         'autoDetect': 'Auto Detect',
+        'summonerRevealEnabled': 'Summoner Reveal',
+        'summonerRevealDesc': 'Show player stats (rank, winrate, KDA) in champ select sidebar',
     },
     'ru_RU': {
         // UI Components
@@ -171,6 +173,8 @@ const translations = {
         // Language selector
         'languageLabel': 'Язык',
         'autoDetect': 'Автоопределение',
+        'summonerRevealEnabled': 'Статистика игроков',
+        'summonerRevealDesc': 'Показывать статистику игроков (ранг, винрейт, KDA) в боковой панели',
     },
     'zh_CN': {
         // UI Components
@@ -254,6 +258,8 @@ const translations = {
         // 语言选择器
         'languageLabel': '语言',
         'autoDetect': '自动检测',
+        'summonerRevealEnabled': '召唤师信息',
+        'summonerRevealDesc': '选人阶段显示玩家战绩（段位、胜率、KDA）侧边栏',
     },
     // 阿拉伯语 (ar_AE)
     'ar_AE': {
@@ -338,6 +344,8 @@ const translations = {
         // محدد اللغة
         'languageLabel': 'اللغة',
         'autoDetect': 'كشف تلقائي',
+        'summonerRevealEnabled': 'كشف اللاعب',
+        'summonerRevealDesc': 'إظهار إحصائيات اللاعب (الرتبة، نسبة الفوز، KDA) في الشريط الجانبي',
     },
     // 印尼语 (id_ID)
     'id_ID': {
@@ -422,6 +430,8 @@ const translations = {
         // Language selector
         'languageLabel': 'Bahasa',
         'autoDetect': 'Deteksi Otomatis',
+        'summonerRevealEnabled': 'Reveal Summoner',
+        'summonerRevealDesc': 'Tampilkan statistik pemain (rank, winrate, KDA) di sidebar',
     },
     // 捷克语 (cs_CZ)
     'cs_CZ': {
@@ -506,6 +516,8 @@ const translations = {
         // Language selector
         'languageLabel': 'Jazyk',
         'autoDetect': 'Automatická detekce',
+        'summonerRevealEnabled': 'Odhalení hráče',
+        'summonerRevealDesc': 'Zobrazit statistiky hráčů (rank, winrate, KDA) v postranním panelu',
     },
     // 德语 (de_DE)
     'de_DE': {
@@ -590,6 +602,8 @@ const translations = {
         // Language selector
         'languageLabel': 'Sprache',
         'autoDetect': 'Automatische Erkennung',
+        'summonerRevealEnabled': 'Beschwörer-Info',
+        'summonerRevealDesc': 'Spielstatistiken (Rang, Winrate, KDA) in der Seitenleiste anzeigen',
     },
     // 希腊语 (el_GR)
     'el_GR': {
@@ -674,6 +688,8 @@ const translations = {
         // Language selector
         'languageLabel': 'Γλώσσα',
         'autoDetect': 'Αυτόματος εντοπισμός',
+        'summonerRevealEnabled': 'Αποκάλυψη παίκτη',
+        'summonerRevealDesc': 'Εμφάνιση στατιστικών παικτών (rank, winrate, KDA) στην πλαϊνή μπάρα',
     },
     // Español (es_ES)
     'es_ES': {
@@ -742,6 +758,8 @@ const translations = {
         'tagsUpdated': 'Etiquetas actualizadas',
         'languageLabel': 'Idioma',
         'autoDetect': 'Detección automática',
+        'summonerRevealEnabled': 'Revelar invocador',
+        'summonerRevealDesc': 'Mostrar estadísticas de jugadores (rango, winrate, KDA) en la barra lateral',
     },
     // Français (fr_FR)
     'fr_FR': {
@@ -810,6 +828,8 @@ const translations = {
         'tagsUpdated': 'Étiquettes mises à jour',
         'languageLabel': 'Langue',
         'autoDetect': 'Détection automatique',
+        'summonerRevealEnabled': 'Révélation des invocateurs',
+        'summonerRevealDesc': 'Afficher les statistiques des joueurs (rang, winrate, KDA) dans la barre latérale',
     },
     // Magyar (hu_HU)
     'hu_HU': {
@@ -878,6 +898,8 @@ const translations = {
         'tagsUpdated': 'Címkék frissítve',
         'languageLabel': 'Nyelv',
         'autoDetect': 'Automatikus felismerés',
+        'summonerRevealEnabled': 'Játékos statisztika',
+        'summonerRevealDesc': 'Játékos statisztikák (rank, winrate, KDA) megjelenítése oldalsávban',
     },
     // Italiano (it_IT)
     'it_IT': {
@@ -946,6 +968,8 @@ const translations = {
         'tagsUpdated': 'Etichette aggiornate',
         'languageLabel': 'Lingua',
         'autoDetect': 'Rilevamento automatico',
+        'summonerRevealEnabled': 'Rivelazione evocatore',
+        'summonerRevealDesc': 'Mostra statistiche giocatori (rank, winrate, KDA) nella barra laterale',
     },
     // 日本語 (ja_JP)
     'ja_JP': {
@@ -1014,6 +1038,8 @@ const translations = {
         'tagsUpdated': 'タグを更新しました',
         'languageLabel': '言語',
         'autoDetect': '自動検出',
+        'summonerRevealEnabled': 'サモナー情報',
+        'summonerRevealDesc': 'チャンピオン選択時のサイドバーにプレイヤー戦績（ランク、勝率、KDA）を表示',
     },
     // 한국어 (ko_KR)
     'ko_KR': {
@@ -1082,6 +1108,8 @@ const translations = {
         'tagsUpdated': '태그가 업데이트되었습니다',
         'languageLabel': '언어',
         'autoDetect': '자동 감지',
+        'summonerRevealEnabled': '소환사 정보',
+        'summonerRevealDesc': '챔피언 선택 시 사이드바에 플레이어 전적(랭크, 승률, KDA) 표시',
     },
     // Polski (pl_PL)
     'pl_PL': {
@@ -1150,6 +1178,8 @@ const translations = {
         'tagsUpdated': 'Tagi zaktualizowane',
         'languageLabel': 'Język',
         'autoDetect': 'Automatyczne wykrywanie',
+        'summonerRevealEnabled': 'Statystyki graczy',
+        'summonerRevealDesc': 'Pokaż statystyki graczy (rank, winrate, KDA) w panelu bocznym',
     },
     // Português (pt_BR)
     'pt_BR': {
@@ -1218,6 +1248,8 @@ const translations = {
         'tagsUpdated': 'Tags atualizadas',
         'languageLabel': 'Idioma',
         'autoDetect': 'Detecção automática',
+        'summonerRevealEnabled': 'Revelar invocador',
+        'summonerRevealDesc': 'Mostrar estatísticas de jogadores (rank, winrate, KDA) na barra lateral',
     },
     // Română (ro_RO)
     'ro_RO': {
@@ -1286,6 +1318,8 @@ const translations = {
         'tagsUpdated': 'Etichete actualizate',
         'languageLabel': 'Limbă',
         'autoDetect': 'Detectare automată',
+        'summonerRevealEnabled': 'Informații jucători',
+        'summonerRevealDesc': 'Afișează statisticile jucătorilor (rank, winrate, KDA) în bara laterală',
     },
     // ภาษาไทย (th_TH)
     'th_TH': {
@@ -1354,6 +1388,8 @@ const translations = {
         'tagsUpdated': 'แท็กอัปเดตแล้ว',
         'languageLabel': 'ภาษา',
         'autoDetect': 'ตรวจจับอัตโนมัติ',
+        'summonerRevealEnabled': 'ข้อมูลผู้เล่น',
+        'summonerRevealDesc': 'แสดงสถิติผู้เล่น (แรงก์, อัตราชนะ, KDA) ในแถบด้านข้าง',
     },
     // Türkçe (tr_TR)
     'tr_TR': {
@@ -1422,6 +1458,8 @@ const translations = {
         'tagsUpdated': 'Etiketler güncellendi',
         'languageLabel': 'Dil',
         'autoDetect': 'Otomatik algıla',
+        'summonerRevealEnabled': 'Sihildar Bilgisi',
+        'summonerRevealDesc': 'Oyuncu istatistiklerini (rank, winrate, KDA) yan panelde göster',
     },
     // Tiếng Việt (vi_VN)
     'vi_VN': {
@@ -1490,6 +1528,8 @@ const translations = {
         'tagsUpdated': 'Đã cập nhật thẻ',
         'languageLabel': 'Ngôn ngữ',
         'autoDetect': 'Tự động phát hiện',
+        'summonerRevealEnabled': 'Thông tin người chơi',
+        'summonerRevealDesc': 'Hiển thị thống kê người chơi (rank, winrate, KDA) ở thanh bên',
     },
     // 中文（马来西亚） (zh_MY)
     'zh_MY': {
@@ -1558,6 +1598,8 @@ const translations = {
         'tagsUpdated': '标签已更新',
         'languageLabel': '语言',
         'autoDetect': '自动检测',
+        'summonerRevealEnabled': '召唤师信息',
+        'summonerRevealDesc': '选人阶段显示玩家战绩（段位、胜率、KDA）侧边栏',
     },
     // 繁體中文 (zh_TW)
     'zh_TW': {
@@ -1626,6 +1668,8 @@ const translations = {
         'tagsUpdated': '標籤已更新',
         'languageLabel': '語言',
         'autoDetect': '自動偵測',
+        'summonerRevealEnabled': '召喚師資訊',
+        'summonerRevealDesc': '選人階段顯示玩家戰績（段位、勝率、KDA）側邊欄',
     },
 };
 
