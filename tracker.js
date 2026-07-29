@@ -6,7 +6,7 @@ const API_HEADERS = {
 
 export async function create(method, endpoint, action) {
     const initialize = {
-        method: method,
+        method: method.toUpperCase(),
         headers: API_HEADERS,
         ...action ? { body: JSON.stringify(action) } : undefined  
     };
@@ -16,9 +16,11 @@ export async function create(method, endpoint, action) {
         if (!request.ok) {
             throw new Error(`HTTP error! status: ${request.status}`);
         }
-        return await request.json();
+        const text = await request.text();
+        if (!text) return true; // Empty response (e.g. 204), but request succeeded
+        return JSON.parse(text);
     } catch (error) {
-        console.error(`Error in create function for ${method} ${endpoint}: ${error}`);
+        console.error(`[DodgeTracker] Error in create(${method} ${endpoint}): ${error}`);
         return null;
     }
 }
