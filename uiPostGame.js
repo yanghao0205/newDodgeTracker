@@ -50,10 +50,11 @@ export function addButtonPostGame(context) {
                                 try {
                                     // 使用正确的属性路径获取玩家名称
                                     const playerName = `${player.riotIdGameName}#${player.riotIdTagLine}`;
-                                    console.log('获取到玩家名称:', playerName);
-                                    
+                                    const playerPuuid = player?.puuid || null;
+                                    console.log('获取到玩家名称:', playerName, 'puuid:', playerPuuid);
+
                                     // 调用添加到躲避列表的模态框
-                                    showAddToDodgeListModal(playerName);
+                                    showAddToDodgeListModal(playerName, playerPuuid);
                                 } catch (error) {
                                     console.error('获取玩家名称时出错:', error, player);
                                     
@@ -106,13 +107,14 @@ export function addButtonPostGame(context) {
                                     action: function() {
                                         const player = this.get('playerNameFull')
                                         const playerName = `${player.split('#')[0]}#${player.split('#')[1]}`
+                                        const playerPuuid = this.get('puuid') || null
                                         // 确保在添加玩家前先初始化语言设置
                                         if (typeof initLocale === 'function') {
                                             initLocale().then(() => {
-                                                showAddToDodgeListModal(playerName)
+                                                showAddToDodgeListModal(playerName, playerPuuid)
                                             });
                                         } else {
-                                            showAddToDodgeListModal(playerName)
+                                            showAddToDodgeListModal(playerName, playerPuuid)
                                         }
                                         return
                                     }
@@ -131,10 +133,22 @@ export function addButtonPostGame(context) {
     })
 }
 
-function showAddToDodgeListModal(playerName) {
+function showAddToDodgeListModal(playerName, puuid = null) {
     // 使用增强版躲避列表
     const dodgeList = DataStore.get('dodgelist-enhanced', []);
-    const existingEntry = dodgeList.find(entry => entry.name.toLowerCase() === playerName.split('#')[0].toLowerCase());
+    const nameLower = playerName.split('#')[0].toLowerCase();
+
+    // Same-entry predicate: puuid first (survives renames), name fallback.
+    const isSameEntry = (entry) => {
+        if (puuid && entry.puuid) return entry.puuid === puuid;
+        return entry.name.toLowerCase() === nameLower;
+    };
+
+    // Look up an existing entry: puuid match takes priority over name match,
+    // so a renamed player still resolves to their original dodge list entry.
+    const existingEntry = dodgeList.find(entry =>
+        (puuid && entry.puuid && entry.puuid === puuid)
+    ) || dodgeList.find(entry => entry.name.toLowerCase() === nameLower);
     
     // 创建模态框HTML（标签区留空，后续动态渲染）
     const modalHtml = `
@@ -362,11 +376,14 @@ function showAddToDodgeListModal(playerName) {
                 
                 // 更新或添加到躲避列表
                 if (existingEntry) {
-                    // 更新现有条目
+                    // 更新现有条目（同时刷新名称/标签/puuid，玩家改过名也能跟踪）
                     const updatedList = dodgeList.map(entry => {
-                        if (entry.name.toLowerCase() === playerName.split('#')[0].toLowerCase()) {
+                        if (isSameEntry(entry)) {
                             return {
                                 ...entry,
+                                name: playerName.split('#')[0],
+                                tag: playerName.split('#')[1] || entry.tag || '',
+                                puuid: puuid || entry.puuid || null,
                                 tags: selectedTags,
                                 note: note
                             };
@@ -385,6 +402,7 @@ function showAddToDodgeListModal(playerName) {
                         const newEntry = {
                             name: playerName.split('#')[0],
                             tag: playerName.split('#')[1] || '',
+                            puuid: puuid || null,
                             tags: selectedTags,
                             note: note,
                             addedDate: new Date().toISOString()
@@ -393,7 +411,11 @@ function showAddToDodgeListModal(playerName) {
                         dodgeList.push(newEntry);
                         DataStore.set('dodgelist-enhanced', dodgeList);
                         // Note: do not run cleanup here with force=true; see update path above.
-                        showSuccessToast(t('playerAdded', playerName));
+                        // Tell the user whether this entry is rename-proof (puuid locked)
+                        // or name-only, same as the manual add path in ui/components.js.
+                        showSuccessToast(puuid
+                            ? t('playerAddedLocked', playerName)
+                            : t('playerAddedNameOnly', playerName));
                     } catch (e) {
                         console.error('Error parsing existing entry:', e);
                     }

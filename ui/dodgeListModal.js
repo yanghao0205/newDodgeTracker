@@ -4,10 +4,20 @@ import { t } from '../utils/translations.js';
 import { getAllTags, getTagDisplayLabel, addCustomTag, getCustomTags, cleanupUnusedCustomTags, PRESET_TAGS } from '../utils/customTags.js';
 
 export class DodgeListModal {
+    /**
+     * Identity check between two dodge list entries: puuid first (survives
+     * renames), name#tag fallback for legacy entries without puuid.
+     */
+    static samePlayer(a, b) {
+        if (a.puuid && b.puuid) return a.puuid === b.puuid;
+        return a.name === b.name && a.tag === b.tag;
+    }
+
     constructor() {
         this.modal = null;
         this.overlay = null;
         this.listContainer = null;
+        this.legendContainer = null;
         this.searchInput = null;
         this.currentFilter = 'all'; // Current filter status
     }
@@ -216,6 +226,18 @@ export class DodgeListModal {
         searchContainer.appendChild(tagFilterSection);
         this.modal.appendChild(searchContainer);
 
+        // Tracking status legend — counts are filled in by renderPlayerList()
+        this.legendContainer = document.createElement('div');
+        this.legendContainer.style.cssText = `
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: ${COLORS.textSecondary};
+        `;
+        this.modal.appendChild(this.legendContainer);
+
         // Player list container
         this.listContainer = document.createElement('div');
         this.listContainer.style.cssText = `
@@ -255,8 +277,8 @@ export class DodgeListModal {
         // Add search functionality
         this.searchInput.addEventListener('input', () => {
             const searchTerm = this.searchInput.value.toLowerCase();
-            const filteredList = dodgeList.filter(player => 
-                (player.name + '#' + player.tag).toLowerCase().includes(searchTerm)
+            const filteredList = dodgeList.filter(player =>
+                (player.tag ? `${player.name}#${player.tag}` : player.name).toLowerCase().includes(searchTerm)
             );
             this.renderPlayerList(filteredList);
         });
@@ -275,8 +297,63 @@ export class DodgeListModal {
         this.renderPlayerList(filteredList);
     }
 
+    /**
+     * Small status dot shown next to every dodge list entry:
+     *   green — the entry stores a puuid, so it keeps matching after a rename
+     *   grey  — name#tag only, the entry is lost if that player renames
+     */
+    static trackingDot(locked) {
+        const dot = document.createElement('span');
+        dot.style.cssText = `
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: ${locked ? COLORS.trackingLocked : COLORS.trackingNameOnly};
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4);
+        `;
+        dot.title = locked ? t('trackingLocked') : t('trackingNameOnly');
+        return dot;
+    }
+
+    /**
+     * Legend above the list: how many of the currently shown entries are
+     * locked by puuid vs name-only. Reflects the active search/tag filter.
+     */
+    renderLegend(players) {
+        if (!this.legendContainer) return;
+
+        // Counts follow the currently rendered list, so they reflect the
+        // active search / tag filter (not always the whole dodge list).
+        const locked = players.filter(p => p.puuid).length;
+        this.legendContainer.innerHTML = '';
+
+        const addItem = (isLocked, text) => {
+            const item = document.createElement('span');
+            item.style.cssText = `
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            `;
+            item.title = isLocked ? t('trackingLocked') : t('trackingNameOnly');
+
+            item.appendChild(DodgeListModal.trackingDot(isLocked));
+
+            const label = document.createElement('span');
+            label.innerText = text;
+            item.appendChild(label);
+
+            this.legendContainer.appendChild(item);
+        };
+
+        addItem(true, `${t('legendLocked')} ${locked}`);
+        addItem(false, `${t('legendNameOnly')} ${players.length - locked}`);
+    }
+
     renderPlayerList(players) {
         this.listContainer.innerHTML = '';
+        this.renderLegend(players);
         
         if (players.length === 0) {
             const emptyMessage = document.createElement('div');
@@ -310,11 +387,18 @@ export class DodgeListModal {
             `;
             
             const nameElement = document.createElement('div');
-            nameElement.innerText = `${player.name}#${player.tag}`;
             nameElement.style.cssText = `
+                display: flex;
+                align-items: center;
                 font-weight: bold;
                 color: ${COLORS.highlight};
             `;
+            nameElement.appendChild(DodgeListModal.trackingDot(!!player.puuid));
+
+            const nameText = document.createElement('span');
+            nameText.innerText = player.tag ? `${player.name}#${player.tag}` : player.name;
+            nameElement.appendChild(nameText);
+
             nameContainer.appendChild(nameElement);
             
             // Note preview
@@ -441,7 +525,7 @@ export class DodgeListModal {
         saveBtn.style.width = '100%';
         saveBtn.onclick = () => {
             const updatedList = DataStore.get('dodgelist-enhanced', []).map(p => {
-                if (p.name === player.name) {
+                if (DodgeListModal.samePlayer(p, player)) {
                     return { ...p, note: textarea.value };
                 }
                 return p;
@@ -457,7 +541,7 @@ export class DodgeListModal {
 
     async removePlayer(player) {
         const updatedList = DataStore.get('dodgelist-enhanced', []).filter(
-            p => p.name !== player.name
+            p => !DodgeListModal.samePlayer(p, player)
         );
         DataStore.set('dodgelist-enhanced', updatedList);
 
@@ -634,7 +718,7 @@ export class DodgeListModal {
                 .map(checkbox => checkbox.value);
 
             const updatedList = DataStore.get('dodgelist-enhanced', []).map(p => {
-                if (p.name === player.name) {
+                if (DodgeListModal.samePlayer(p, player)) {
                     return { ...p, tags: selectedTags };
                 }
                 return p;

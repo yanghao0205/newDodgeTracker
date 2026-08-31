@@ -3,6 +3,8 @@ import { t, getSupportedLocalesWithNames, getManualLocale, setManualLocale } fro
 import { refreshSettingsCategories } from '../uiSettings.js';
 import { COLORS } from './styles.js';
 import { isSummonerRevealEnabled, setSummonerRevealEnabled, removeRevealSidebar } from '../summonerReveal.js';
+import { post } from '../utils/lcu.js';
+import { LCU_SUMMONERS_BY_NAMES } from '../utils/endpoints.js';
 
 export const dodgeListModal = new DodgeListModal();
 
@@ -107,25 +109,67 @@ function renderSettingsPanel(panel) {
     const dodgelistInput = panel.querySelector('#dodgelist');
     const langSelect = panel.querySelector('#dodgelist-lang-select');
 
-    addPlayerBtn.onclick = () => {
+    addPlayerBtn.onclick = async () => {
         const playerName = dodgelistInput.value.trim();
         if (playerName) {
+            const namePart = playerName.split('#')[0];
+            const tagPart = playerName.split('#')[1];
             const dodgeList = DataStore.get('dodgelist-enhanced', []);
-            const existingPlayer = dodgeList.find(p => 
-                p.name === playerName.split('#')[0]
+            const existingPlayer = dodgeList.find(p =>
+                p.name === namePart
             );
-            
+
             if (existingPlayer) {
                 Toast.error(t('playerExists', playerName));
             } else {
+                // Try to resolve the puuid so the entry survives renames.
+                // On failure (player offline / typo / LCU hiccup) we still add
+                // the entry with puuid: null — it matches by name until the
+                // puuid gets backfilled during a future champ select.
+                //
+                // IMPORTANT: the name the user typed is authoritative. The
+                // lookup result is only ever used to fill in `puuid` — it must
+                // NEVER overwrite name/tag.
+                let puuid = null;
+                try {
+                    // POST /lol-summoner/v2/summoners/names takes an array of
+                    // game names and returns an array of summoner objects.
+                    // Several players can share one game name, so pick the
+                    // entry whose gameName AND tagLine match what was typed —
+                    // anything else is a different player and gets ignored.
+                    const results = await post(LCU_SUMMONERS_BY_NAMES, [namePart]);
+                    const found = (Array.isArray(results) ? results : [])
+                        .find(x => x && x.gameName &&
+                            x.gameName.toLowerCase() === namePart.toLowerCase() &&
+                            (!tagPart || (x.tagLine &&
+                                x.tagLine.toLowerCase() === tagPart.toLowerCase())));
+
+                    if (found && found.puuid) {
+                        puuid = found.puuid;
+                        console.log('[DodgeTracker] Resolved puuid for', playerName);
+                    } else {
+                        console.warn('[DodgeTracker] Lookup for', playerName,
+                            'returned no matching account (' +
+                            (Array.isArray(results) ? results.length : 0) +
+                            ' candidate(s)) — adding with name match only');
+                    }
+                } catch (e) {
+                    console.warn('[DodgeTracker] Could not resolve puuid for', playerName, '— adding with name match only:', e.message);
+                }
+
                 dodgeList.push({
-                    name: playerName.split('#')[0],
-                    tag: playerName.split('#')[1], // 保存唯一ID
+                    name: namePart,
+                    tag: tagPart || '',
+                    puuid: puuid,
                     tags: [], // 初始化空的标签数组
-                    notes: ''
+                    note: ''
                 });
                 DataStore.set('dodgelist-enhanced', dodgeList);
-                Toast.success(t('playerAdded', playerName));
+                // Tell the user right away whether this entry is rename-proof
+                // (puuid resolved → green dot) or name-only (grey dot).
+                Toast.success(puuid
+                    ? t('playerAddedLocked', playerName)
+                    : t('playerAddedNameOnly', playerName));
                 dodgelistInput.value = '';
             }
         }

@@ -35,7 +35,9 @@ async function getChampionSelectChatInfo() {
     }
 
     if (!chat) {
-        console.error('[DodgeTracker] getChampionSelectChatInfo: no champion select conversation found. Available types:', conversations.map(c => c.type));
+        // Not an error: during the 1s poll loop this is the normal state for
+        // the first few ticks — the champ-select room has not been created yet.
+        console.warn('[DodgeTracker] getChampionSelectChatInfo: champ select conversation not created yet. Available types:', conversations.map(c => c.type));
     }
 
     return chat;

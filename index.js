@@ -32,25 +32,73 @@ async function getSummonerName() {
     return data.gameName + "#" + data.tagLine
 }
 
-function isInMyTeam(currentQueue) {
+/**
+ * Match a dodge list entry against a player.
+ * Returns WHICH path matched, so callers can log it and you can tell at a
+ * glance whether a hit is rename-proof or not:
+ *   'puuid' — matched on puuid (survives renames). Only tried when both the
+ *             entry and the live player have a puuid.
+ *   'name'  — legacy name#tag fallback (entry has no puuid yet, or the live
+ *             player's puuid could not be resolved this session).
+ *   null    — no match.
+ */
+function matchesPlayer(entry, fullName, puuid) {
+    if (puuid && entry.puuid) {
+        return entry.puuid === puuid ? 'puuid' : null;
+    }
+    // Legacy fallback: compare name#tag. Old migrated entries may have no tag.
+    const entryName = entry.tag ? `${entry.name}#${entry.tag}` : entry.name;
+    return entryName.toLowerCase() === fullName.toLowerCase() ? 'name' : null;
+}
+
+function isInMyTeam(currentQueue, champSelectSummoners = []) {
     // 使用增强版躲避列表
     const enhancedDodgeList = DataStore.get('dodgelist-enhanced', []);
     // 返回完整的玩家对象和匹配的名称
     const targets = [];
 
-    currentQueue.forEach(name => {
-        const lowerName = name.toLowerCase();
-        const playerObj = enhancedDodgeList.find(player =>
-            (player.name + "#" + player.tag).toLowerCase() === lowerName
-        );
-
-        if (playerObj) {
-            targets.push({
-                fullName: name,
-                playerData: playerObj
-            });
+    // Map "gamename#tagline" → puuid, from the champ-select summoner payloads
+    const puuidByName = new Map();
+    champSelectSummoners.forEach(s => {
+        if (s && s.puuid && s.gameName != null) {
+            puuidByName.set((s.gameName + "#" + s.tagLine).toLowerCase(), s.puuid);
         }
     });
+
+    const withPuuid = enhancedDodgeList.filter(e => e.puuid).length;
+    console.log(`[DodgeTracker] Dodge list: ${enhancedDodgeList.length} entries ` +
+        `(${withPuuid} locked by puuid, ${enhancedDodgeList.length - withPuuid} name-only)`)
+
+    let backfilled = false;
+    currentQueue.forEach(name => {
+        const puuid = puuidByName.get(name.toLowerCase()) || null;
+        const playerObj = enhancedDodgeList.find(player => matchesPlayer(player, name, puuid));
+
+        if (playerObj) {
+            const matchKind = matchesPlayer(playerObj, name, puuid);
+            targets.push({
+                fullName: name,
+                playerData: playerObj,
+                matchKind
+            });
+
+            // Auto-backfill: a legacy entry matched by name while we know the
+            // player's puuid — persist it so future renames still match.
+            if (puuid && !playerObj.puuid) {
+                playerObj.puuid = puuid;
+                backfilled = true;
+                console.log(`[DodgeTracker] Match: ${name} -> name#tag ` +
+                    `(puuid backfilled, next game will match by puuid)`)
+            } else {
+                console.log(`[DodgeTracker] Match: ${name} -> ${
+                    matchKind === 'puuid' ? 'puuid (rename-proof)' : 'name#tag (no puuid available)'}`)
+            }
+        }
+    });
+
+    if (backfilled) {
+        DataStore.set('dodgelist-enhanced', enhancedDodgeList);
+    }
 
     return targets;
 }
@@ -258,7 +306,8 @@ async function handleChampSelect() {
         }
 
         // --- DodgeTracker alerts ---
-        const list = isInMyTeam(players)
+        // Pass champ-select summoners so matching can use puuid first
+        const list = isInMyTeam(players, champSelectSummoners || [])
 
         if (list.length === 0) {
             console.log('[DodgeTracker] No dodged players detected in this team')
@@ -266,7 +315,8 @@ async function handleChampSelect() {
             return
         }
 
-        console.log(`[DodgeTracker] Detected ${list.length} dodged player(s) in team`)
+        console.log(`[DodgeTracker] Detected ${list.length} dodged player(s): ` +
+            list.map(p => `${p.fullName} [${p.matchKind === 'puuid' ? 'puuid' : 'name#tag'}]`).join(', '))
 
         for (const player of list) {
             // 获取标签和备注信息
@@ -285,7 +335,8 @@ async function handleChampSelect() {
             const infoText = [tagsText, noteText].filter(text => text).join(' ');
 
             // 发送消息
-            console.log(`[DodgeTracker] Posting alert for: ${player.fullName}`)
+            console.log(`[DodgeTracker] Posting alert for: ${player.fullName} ` +
+                `[matched by ${player.matchKind === 'puuid' ? 'puuid' : 'name#tag'}]`)
             postMessageToChat(chatInfo.id, `DodgeTracker: ${t('playerDetected', player.fullName, infoText)}`);
         }
     } catch (error) {

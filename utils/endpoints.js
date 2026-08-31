@@ -9,10 +9,25 @@
 
 // ── Summoner ──
 export const LCU_CURRENT_SUMMONER = "/lol-summoner/v1/current-summoner";
+// ids is a vector<uint64_t> on the LCU side: it wants a JSON-ish collection,
+// NOT a comma separated scalar. `?ids=123` returns
+// 400 "Couldn't assign value to 'ids' of type vector because the input not a
+// collection" — so always emit `[a,b,c]`.
 export const lcuSummonersByIds = (ids) =>
-    `/lol-summoner/v2/summoners?ids=${ids.join(",")}`;
+    `/lol-summoner/v2/summoners?ids=[${ids.join(",")}]`;
 export const lcuSummonerById = (id) =>
     `/lol-summoner/v1/summoners/${id}`;
+// Resolve summoners by Riot ID game name (same region).
+// POST body: ["GameName", ...] → [ { puuid, gameName, tagLine, ... }, ... ]
+//
+// NEVER use `/lol-summoner/v1/summoners?name=...` to do this. That query
+// matches the LEGACY summonerName field, which since the Riot ID migration
+// (2023-11-20) is a random uuidv4 string for accounts created afterwards —
+// so it cannot match a Riot ID game name. Worse, on current client builds an
+// ignored/unknown query param makes the endpoint fall back to returning the
+// CURRENT summoner, which silently bound manually added entries to your own
+// account (the v1.2.5 bug: "最終の謎#JP1" became "Thefinalanswer#JP1").
+export const LCU_SUMMONERS_BY_NAMES = "/lol-summoner/v2/summoners/names";
 
 // ── Champ select ──
 export const LCU_CHAMP_SELECT_SESSION = "/lol-champ-select/v1/session";

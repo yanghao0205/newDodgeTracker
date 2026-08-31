@@ -34,6 +34,14 @@ const translations = {
         'noteSaved': 'Note saved successfully',
         'playerRemoved': '{0} has been removed from the dodge list',
         'noteFor': 'Note for {0}',
+
+        // Tracking status (green dot vs grey dot in the dodge list)
+        'trackingLocked': 'Locked by PUUID — still detected after a rename',
+        'trackingNameOnly': 'Name only — will be missed if this player renames',
+        'legendLocked': 'Permanently tracked',
+        'legendNameOnly': 'Name only',
+        'playerAddedLocked': 'Added {0} — permanently tracked',
+        'playerAddedNameOnly': 'Added {0} — name only, missed if they rename',
         
         // Tags
         'all': 'All',
@@ -204,6 +212,14 @@ const translations = {
         'noteSaved': '备注保存成功',
         'playerRemoved': '{0} 已从躲避列表中移除',
         'noteFor': '{0} 的备注',
+
+        // 追踪状态（躲避列表里的绿点 / 灰点）
+        'trackingLocked': '已锁定 PUUID —— 对方改名后仍能识别',
+        'trackingNameOnly': '仅按名字匹配 —— 对方改名后会漏掉',
+        'legendLocked': '永久跟踪',
+        'legendNameOnly': '仅名字',
+        'playerAddedLocked': '已添加 {0} —— 永久跟踪',
+        'playerAddedNameOnly': '已添加 {0} —— 仅名字匹配，改名后会漏',
         
         // Tags
         'all': '全部',
@@ -1558,6 +1574,14 @@ const translations = {
         'noteSaved': '备注保存成功',
         'playerRemoved': '{0} 已从躲避列表中移除',
         'noteFor': '{0} 的备注',
+
+        // 追踪状态（躲避列表里的绿点 / 灰点）
+        'trackingLocked': '已锁定 PUUID —— 对方改名后仍能识别',
+        'trackingNameOnly': '仅按名字匹配 —— 对方改名后会漏掉',
+        'legendLocked': '永久跟踪',
+        'legendNameOnly': '仅名字',
+        'playerAddedLocked': '已添加 {0} —— 永久跟踪',
+        'playerAddedNameOnly': '已添加 {0} —— 仅名字匹配，改名后会漏',
         'all': '全部',
         'afk': '挂机',
         'troll': '搞事',

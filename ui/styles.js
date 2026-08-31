@@ -4,7 +4,13 @@ export const COLORS = {
     text: '#F0E6D2',
     highlight: '#C8AA6E',
     danger: '#E84057',
-    success: '#08A76B'
+    success: '#08A76B',
+    // textSecondary was referenced by the dodge list UI but never defined,
+    // which rendered as `color: undefined`. Define it so those styles apply.
+    textSecondary: '#A09B8C',
+    // Tracking status dots in the dodge list.
+    trackingLocked: '#08A76B',   // green  — entry has a puuid (rename-proof)
+    trackingNameOnly: '#7A7A78'  // grey   — name#tag only (lost on rename)
 };
 
 export const STYLES = {
