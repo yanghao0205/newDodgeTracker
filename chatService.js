@@ -1,40 +1,44 @@
 //CHAT SERVICE BY @dakota1337x
+// (refactored: transport moved to utils/lcu.js, endpoints to utils/endpoints.js)
 
 // Importing other modules
-import { create } from './tracker';
+import { get, post } from './utils/lcu.js';
+import { LCU_CHAT_CONVERSATIONS, lcuChatMessages } from './utils/endpoints.js';
 
 /**
  * Retrieves information about the champion select chat.
  * @returns {Object|null} - The chat information object or null if not found.
  */
 async function getChampionSelectChatInfo() {
+    let conversations;
     try {
-        const conversations = await create('GET', '/lol-chat/v1/conversations');
-        if (!conversations || !Array.isArray(conversations)) {
-            console.error('[DodgeTracker] getChampionSelectChatInfo: /lol-chat/v1/conversations returned null or non-array');
-            return null;
-        }
-
-        // Try exact type match first
-        let chat = conversations.find(item => item.type === 'championSelect');
-
-        // Fallback: look for any conversation with "champ" in the type
-        if (!chat) {
-            chat = conversations.find(item => item.type && item.type.toLowerCase().includes('champ'));
-            if (chat) {
-                console.log('[DodgeTracker] getChampionSelectChatInfo: found chat via fallback type:', chat.type);
-            }
-        }
-
-        if (!chat) {
-            console.error('[DodgeTracker] getChampionSelectChatInfo: no champion select conversation found. Available types:', conversations.map(c => c.type));
-        }
-
-        return chat;
+        conversations = await get(LCU_CHAT_CONVERSATIONS);
     } catch (error) {
-        console.error('[DodgeTracker] Error fetching champion select chat info:', error);
+        console.error('[DodgeTracker] getChampionSelectChatInfo: GET conversations failed:', error.message);
         return null;
     }
+
+    if (!conversations || !Array.isArray(conversations)) {
+        console.error('[DodgeTracker] getChampionSelectChatInfo: /lol-chat/v1/conversations returned null or non-array');
+        return null;
+    }
+
+    // Try exact type match first
+    let chat = conversations.find(item => item.type === 'championSelect');
+
+    // Fallback: look for any conversation with "champ" in the type
+    if (!chat) {
+        chat = conversations.find(item => item.type && item.type.toLowerCase().includes('champ'));
+        if (chat) {
+            console.log('[DodgeTracker] getChampionSelectChatInfo: found chat via fallback type:', chat.type);
+        }
+    }
+
+    if (!chat) {
+        console.error('[DodgeTracker] getChampionSelectChatInfo: no champion select conversation found. Available types:', conversations.map(c => c.type));
+    }
+
+    return chat;
 }
 
 /**
@@ -57,12 +61,13 @@ async function postMessageToChat(chatId, message) {
             body: message,
             type: type
         };
-        const result = await create('POST', `/lol-chat/v1/conversations/${chatId}/messages`, action);
-        if (result !== null) {
+        try {
+            await post(lcuChatMessages(chatId), action);
             console.log(`[DodgeTracker] Message posted successfully with type "${type}"`);
             return true;
+        } catch (error) {
+            console.warn(`[DodgeTracker] postMessageToChat with type "${type}" failed (${error.message}), trying next...`);
         }
-        console.warn(`[DodgeTracker] postMessageToChat with type "${type}" failed, trying next...`);
     }
 
     console.error('[DodgeTracker] postMessageToChat: all message types failed');
@@ -75,9 +80,9 @@ async function postMessageToChat(chatId, message) {
  */
 async function getMessageFromChat(chatId) {
     try {
-        return await create('GET', `/lol-chat/v1/conversations/${chatId}/messages`);
+        return await get(lcuChatMessages(chatId));
     } catch (error) {
-        console.error(`[DodgeTracker] Error getting messages from chat ${chatId}:`, error);
+        console.error(`[DodgeTracker] Error getting messages from chat ${chatId}:`, error.message);
         return null;
     }
 }

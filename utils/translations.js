@@ -1,6 +1,8 @@
 // Translation utility for DodgeTracker
 // Supports multiple languages with English as fallback
 
+import { LCU_REGION_LOCALE } from './endpoints.js';
+
 // Default language is English
 let currentLocale = 'en_US';
 
@@ -1813,7 +1815,7 @@ export function getTagLabel(tagValue) {
 export async function initLocale() {
     try {
         // Try to get the client locale from League client
-        const response = await fetch('/riotclient/region-locale');
+        const response = await fetch(LCU_REGION_LOCALE);
         if (response.ok) {
             const data = await response.json();
             if (data && data.locale) {

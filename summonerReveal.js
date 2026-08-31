@@ -2,7 +2,13 @@
 // Originally from "Summoner Name Reveal" plugin by @dakota1337x
 // Shows player stats (rank, winrate, KDA) in a sidebar during champ select
 
-import { create } from './tracker.js';
+import { get, post } from './utils/lcu.js';
+import {
+    lcuMatchHistory,
+    lcuRankedStats,
+    lcuChatMessages,
+    LCU_REGION_LOCALE,
+} from './utils/endpoints.js';
 
 // ─── Eye Icon (base64 PNG) ───
 const EYE_ICON_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAC/0lEQVRoge1ZXW4TQQz++DnASlwgEgcgCgdoIp4RlXgGAhxgA30GQnkGMgcABThAi/qMBg7AqhygUi9QKRdAQlO8qdfrnZndbLUE7SdVqRTP2J/tGXucKwCuYoux1cajJ/APoCfQNXoCXeN6S/oTADsAhpk1L32Co0m6D+AYwA8Aq00Vb1rIHmXWfNzEgNEkfQLgU9P1TQm8Cnm6Ligyry+bwDiz5lvVl6NJ+obSY8U+QSk2zD8za1549rgD4HvrBDJrflco3AOwbJDPAwC7mTVvlT0/A3gcs0kMgSSz5kxR8pQMbwPTzJoPio4bIceECLhw/xSbfgEwi/D4DqUN2K3jg0uvRWbNA6HvNq2vTWCQWXMiNgt5vbRGYjRJbwI49YjMZFr5IlFlfKIYfz9gfBoyHn/PkpNJPSILchRfc0YRKkGNgDywoTBWeO2IrXGpeFd87w7/wrOnlr7XYggUjIkIeSFtyPCpEnLnwSUnErF3gYRGWhIILpDg0SLjd33yAA4FiZJXBea8bshsKHhfhixkvIJpSzIcc5+NnMCYf0HhDWHM5I8ii9mKZFW9Gsjr0NasCfAWgVLHl5s5hux/3yGX4LLDmvIFW/+fBw01UeegW2gQsb6uJzXZmMgV9ua28ggUOsCYosTX0M2iFhuBRNSEYOepXC7rNYUUUg7LLMIgrqjU9DWRESjcQtJGeQaO6QDnBgVTSd5WVBe0SCRKhQ/ddENRA/ZkymmHuHD3Uyr58vuUk8ZFJA7cy43+DqTnqd+JrsKabfB0o6U3ADVzhx6FpX6oChFdbel9UNWR1m2nnwMwHsVttNOuq30XY3yIACo6QvfcexZRdcfiQRO6bdy5eZ9Z81Doa/ygWW9c8aTcaBwioI5n2nhScizlcw8XafU1svXgcLfbPZkubN9Ql3qOtscq+2yc8kuMVW6xsUrlTOnSxioCc99spylivd4GgRzqOKQONh3PtPUjX5LfOqHIsOmdS5POh7udo/+Bo2v0BLpGT6Br9AS6xnYTAPAHGIlWc8/z3roAAAAASUVORK5CYII=";
@@ -40,8 +46,7 @@ function sumArrayElements(arr) {
 // ─── Match History ───
 async function queryMatch(puuid, begIndex = 0, endIndex = 21) {
     try {
-        const endpoint = `/lol-match-history/v1/products/lol/${puuid}/matches?begIndex=${begIndex}&endIndex=${endIndex}`;
-        const data = await create("GET", endpoint);
+        const data = await get(lcuMatchHistory(puuid, begIndex, endIndex));
         if (!data || !data.games || !data.games.games) return false;
         const games = data.games.games;
         return Array.isArray(games) ? extractMatchData(games) : false;
@@ -93,7 +98,7 @@ async function getMatchDataForPuuids(puuids) {
 // ─── Ranked Stats ───
 async function fetchRankedStats(puuid) {
     try {
-        return await create("GET", `/lol-ranked/v1/ranked-stats/${puuid}`);
+        return await get(lcuRankedStats(puuid));
     } catch (error) {
         console.error('[DodgeTracker-SR] Error fetching ranked stats for puuid:', puuid, error);
         return null;
@@ -178,7 +183,7 @@ function formatPlayerDataSidebar(player, rank, matchData) {
 async function postStatsToChat(chatId, messages) {
     for (const msg of messages) {
         try {
-            await create("POST", `/lol-chat/v1/conversations/${chatId}/messages`, {
+            await post(lcuChatMessages(chatId), {
                 body: msg, type: "celebration"
             });
         } catch (error) {
@@ -318,7 +323,7 @@ export async function handleChampionSelectReveal(summoners, chatInfo) {
         // Get region for OP.GG / Porofessor links
         let region = 'na';
         try {
-            const regionData = await create("GET", "/riotclient/region-locale");
+            const regionData = await get(LCU_REGION_LOCALE);
             if (regionData && regionData.webRegion) region = regionData.webRegion;
         } catch (e) {
             console.warn('[DodgeTracker-SR] Could not get region, defaulting to na');
