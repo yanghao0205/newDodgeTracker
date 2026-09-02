@@ -2,7 +2,7 @@ import { DodgeListModal } from './dodgeListModal.js';
 import { t, getSupportedLocalesWithNames, getManualLocale, setManualLocale } from '../utils/translations.js';
 import { refreshSettingsCategories } from '../uiSettings.js';
 import { COLORS } from './styles.js';
-import { isSummonerRevealEnabled, setSummonerRevealEnabled, removeRevealSidebar } from '../summonerReveal.js';
+import { isSummonerRevealEnabled, setSummonerRevealEnabled, removeRevealSidebar, isPrintNamesEnabled, setPrintNamesEnabled } from '../summonerReveal.js';
 import { post } from '../utils/lcu.js';
 import { LCU_SUMMONERS_BY_NAMES } from '../utils/endpoints.js';
 
@@ -52,6 +52,7 @@ function renderSettingsPanel(panel) {
     const manualLocale = getManualLocale();
     const currentSel = manualLocale || 'auto';
     const srEnabled = isSummonerRevealEnabled();
+    const pnEnabled = isPrintNamesEnabled();
 
     // 使用innerHTML来添加设置
     panel.innerHTML = `
@@ -97,6 +98,18 @@ function renderSettingsPanel(panel) {
                 <input type="checkbox" id="summoner-reveal-toggle" ${srEnabled ? 'checked' : ''} style="opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; z-index: 2;">
                 <div id="sr-toggle-bg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: ${srEnabled ? '#039714' : '#3a3a3a'}; border-radius: 12px; transition: background 0.2s; pointer-events: none;">
                     <div style="position: absolute; top: 2px; left: ${srEnabled ? '26px' : '2px'}; width: 20px; height: 20px; background: #f0e6d2; border-radius: 50%; transition: left 0.2s;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 16px; align-items: center;">
+            <div style="flex: 1;">
+                <div class="label">${t('printNamesEnabled')}</div>
+                <div style="font-size: 12px; color: #a09b8c; margin-top: 4px;">${t('printNamesDesc')}</div>
+            </div>
+            <div style="position: relative; width: 48px; height: 24px;">
+                <input type="checkbox" id="print-names-toggle" ${pnEnabled ? 'checked' : ''} style="opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; z-index: 2;">
+                <div id="pn-toggle-bg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: ${pnEnabled ? '#039714' : '#3a3a3a'}; border-radius: 12px; transition: background 0.2s; pointer-events: none;">
+                    <div style="position: absolute; top: 2px; left: ${pnEnabled ? '26px' : '2px'}; width: 20px; height: 20px; background: #f0e6d2; border-radius: 50%; transition: left 0.2s;"></div>
                 </div>
             </div>
         </div>
@@ -211,6 +224,19 @@ function renderSettingsPanel(panel) {
             removeRevealSidebar();
         }
         console.log('[DodgeTracker] Summoner Reveal:', enabled ? 'enabled' : 'disabled');
+    };
+
+    // Print names to chat toggle
+    const pnToggle = panel.querySelector('#print-names-toggle');
+    const pnToggleBg = panel.querySelector('#pn-toggle-bg');
+    pnToggle.onchange = () => {
+        const enabled = pnToggle.checked;
+        setPrintNamesEnabled(enabled);
+        // Update toggle visual
+        pnToggleBg.style.background = enabled ? '#039714' : '#3a3a3a';
+        const knob = pnToggleBg.querySelector('div');
+        knob.style.left = enabled ? '26px' : '2px';
+        console.log('[DodgeTracker] Print names to chat:', enabled ? 'enabled' : 'disabled');
     };
 }
 

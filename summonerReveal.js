@@ -22,6 +22,16 @@ export function setSummonerRevealEnabled(enabled) {
     DataStore.set('dodgelist-summoner-reveal', enabled);
 }
 
+// Print-names toggle: post every detected player's Riot ID to the champ
+// select chat (names only, no stats) — independent from the sidebar above.
+export function isPrintNamesEnabled() {
+    return DataStore.get('dodgelist-print-names', false);
+}
+
+export function setPrintNamesEnabled(enabled) {
+    DataStore.set('dodgelist-print-names', enabled);
+}
+
 // ─── Helper: Roman numeral to number ───
 function romanToNumber(roman) {
     const map = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };

@@ -14,7 +14,7 @@ import { addButtonPostGame } from "./uiPostGame";
 import { migrateDodgeListData } from './utils/dataMigration.js';
 import { initLocale, t } from './utils/translations.js';
 import { getTagDisplayLabel } from './utils/customTags.js';
-import { isSummonerRevealEnabled, handleChampionSelectReveal, removeRevealSidebar } from './summonerReveal.js';
+import { isSummonerRevealEnabled, handleChampionSelectReveal, removeRevealSidebar, isPrintNamesEnabled } from './summonerReveal.js';
 
 // 确保旧版和增强版躲避列表都存在
 if (!DataStore.get('dodgelist')) DataStore.set('dodgelist', [])
@@ -51,27 +51,20 @@ function matchesPlayer(entry, fullName, puuid) {
     return entryName.toLowerCase() === fullName.toLowerCase() ? 'name' : null;
 }
 
-function isInMyTeam(currentQueue, champSelectSummoners = []) {
+function isInMyTeam(players) {
     // 使用增强版躲避列表
     const enhancedDodgeList = DataStore.get('dodgelist-enhanced', []);
     // 返回完整的玩家对象和匹配的名称
     const targets = [];
-
-    // Map "gamename#tagline" → puuid, from the champ-select summoner payloads
-    const puuidByName = new Map();
-    champSelectSummoners.forEach(s => {
-        if (s && s.puuid && s.gameName != null) {
-            puuidByName.set((s.gameName + "#" + s.tagLine).toLowerCase(), s.puuid);
-        }
-    });
 
     const withPuuid = enhancedDodgeList.filter(e => e.puuid).length;
     console.log(`[DodgeTracker] Dodge list: ${enhancedDodgeList.length} entries ` +
         `(${withPuuid} locked by puuid, ${enhancedDodgeList.length - withPuuid} name-only)`)
 
     let backfilled = false;
-    currentQueue.forEach(name => {
-        const puuid = puuidByName.get(name.toLowerCase()) || null;
+    players.forEach(p => {
+        const name = `${p.gameName}#${p.tagLine}`;
+        const puuid = p.puuid || null;
         const playerObj = enhancedDodgeList.find(player => matchesPlayer(player, name, puuid));
 
         if (playerObj) {
@@ -143,10 +136,61 @@ async function getSummonersByIds(summonerIds) {
 }
 
 /**
- * PRIMARY method: get players from LCU Champ Select session API
- * Works on all Pengu Loader versions (uses standard /lol- endpoints)
- * Includes both myTeam and theirTeam
- * Returns { names: [...], summoners: [...] } or null
+ * PRIMARY method: get players from the Riot Client chat participants API.
+ *
+ * Since Riot's champ-select anonymity patch, /lol-champ-select/v1/session
+ * zeroes out teammate summonerIds in solo/duo queue — but the champ-select
+ * chat room still lists every member's REAL Riot ID and puuid via
+ * /riotclient/chat/v5/participants (the hole the standalone "Summoner Name
+ * Reveal" plugin uses). Scope: own team only (the room is team-only).
+ *
+ * Tries single-slash first (correct for Pengu v1.2+), then the legacy
+ * double-slash variant for older Pengu versions.
+ * Returns [{ gameName, tagLine, puuid }] or null.
+ */
+async function playersFromChat() {
+    const endpoints = [
+        RIOT_CLIENT_CHAT_PARTICIPANTS,
+        RIOT_CLIENT_CHAT_PARTICIPANTS_LEGACY
+    ]
+
+    for (const endpoint of endpoints) {
+        try {
+            const lobby = await get(endpoint)
+            if (!lobby || !Array.isArray(lobby.participants)) {
+                console.warn(`[DodgeTracker] playersFromChat: ${endpoint} returned null or no participants`)
+                continue
+            }
+
+            const players = lobby.participants
+                .filter(p => p.cid && p.cid.includes('champ-select'))
+                .filter(p => p.game_name && p.puuid)
+                .map(p => ({
+                    gameName: p.game_name,
+                    tagLine: p.game_tag,
+                    puuid: p.puuid
+                }))
+
+            if (players.length > 0) {
+                console.log('[DodgeTracker] playersFromChat (primary):',
+                    players.map(p => `${p.gameName}#${p.tagLine}`), 'via', endpoint)
+                return players
+            }
+        } catch (error) {
+            console.warn(`[DodgeTracker] playersFromChat: ${endpoint} failed:`, error.message)
+        }
+    }
+
+    console.warn('[DodgeTracker] playersFromChat: all endpoints failed')
+    return null
+}
+
+/**
+ * FALLBACK method: get players from the LCU champ-select session API.
+ * Only works in queues WITHOUT champ-select anonymity (flex, normals) —
+ * in solo/duo ranked the teammate summonerIds are zeroed server-side and
+ * this returns null. Includes both myTeam and theirTeam when available.
+ * Returns [{ gameName, tagLine, puuid }] or null.
  */
 async function playersFromChampSelect() {
     let session
@@ -172,7 +216,7 @@ async function playersFromChampSelect() {
         .map(member => member.summonerId)
 
     if (summonerIds.length === 0) {
-        console.warn('[DodgeTracker] playersFromChampSelect: no valid summonerIds found in myTeam or theirTeam')
+        console.warn('[DodgeTracker] playersFromChampSelect: no valid summonerIds (anonymized queue?)')
         return null
     }
 
@@ -186,58 +230,21 @@ async function playersFromChampSelect() {
         return null
     }
 
-    const names = summoners.map(s => s.gameName + "#" + s.tagLine)
-    console.log('[DodgeTracker] playersFromChampSelect (primary):', names)
-    return { names, summoners }
-}
-
-/**
- * SECONDARY method: get players from Riot Client chat API
- * Tries single-slash first (correct for Pengu v1.2+), then the legacy
- * double-slash variant as a fallback for older Pengu versions.
- */
-async function playersInLobby(){
-    const endpoints = [
-        RIOT_CLIENT_CHAT_PARTICIPANTS,
-        RIOT_CLIENT_CHAT_PARTICIPANTS_LEGACY
-    ]
-
-    for (const endpoint of endpoints) {
-        try {
-            console.log('[DodgeTracker] playersInLobby: trying', endpoint)
-            const lobby = await get(endpoint)
-            if (!lobby || !lobby.participants) {
-                console.warn(`[DodgeTracker] playersInLobby: ${endpoint} returned null or no participants`)
-                continue
-            }
-
-            const participants = lobby.participants.filter(participant => participant.cid.includes('champ-select'))
-
-            const names = []
-            for (const player of participants) {
-                names.push(player.game_name + "#" + player.game_tag)
-            }
-            if (names.length > 0) {
-                console.log('[DodgeTracker] playersInLobby (secondary):', names, 'via', endpoint)
-                return names
-            }
-        } catch (error) {
-            console.warn(`[DodgeTracker] playersInLobby: ${endpoint} failed:`, error.message)
-        }
-    }
-
-    console.warn('[DodgeTracker] playersInLobby: all endpoints failed')
-    return null
+    const players = summoners
+        .filter(s => s && s.gameName != null)
+        .map(s => ({ gameName: s.gameName, tagLine: s.tagLine, puuid: s.puuid || null }))
+    console.log('[DodgeTracker] playersFromChampSelect (fallback):',
+        players.map(p => `${p.gameName}#${p.tagLine}`))
+    return players
 }
 
 async function handleChampSelect() {
     try {
         console.log('[DodgeTracker] ChampSelect detected, polling for players & chat...')
 
-        // Poll every 1s instead of fixed 20s delay
-        // Proceed as soon as both players and chat are ready
+        // Poll the chat participants API every 1s (primary player source),
+        // proceed once the player count is stable and the chat room is ready.
         let players = null
-        let champSelectSummoners = null
         let chatInfo = null
         let lastPlayerCount = 0
         let stableCount = 0
@@ -249,36 +256,37 @@ async function handleChampSelect() {
             await delay(pollInterval)
             elapsed += pollInterval
 
-            // Try to get players from champ select session
-            const result = await playersFromChampSelect()
-            if (result && result.names && result.names.length > 0) {
-                // Track if player count has stabilized
-                if (result.names.length === lastPlayerCount) {
+            // Primary: real Riot IDs + puuids from the champ-select chat room
+            const result = await playersFromChat()
+            if (result && result.length > 0) {
+                // Track if player count has stabilized (late joiners enter
+                // the room one by one during the first few seconds)
+                if (result.length === lastPlayerCount) {
                     stableCount++
                 } else {
                     stableCount = 0
                 }
-                lastPlayerCount = result.names.length
-                players = result.names
-                champSelectSummoners = result.summoners
+                lastPlayerCount = result.length
+                players = result
 
                 // Also try to get chat info
                 if (!chatInfo) {
                     chatInfo = await getChampionSelectChatInfo()
                 }
 
-                // Proceed once players are stable (2 consecutive same counts) and chat is ready
-                if (stableCount >= 1 && chatInfo) {
-                    console.log(`[DodgeTracker] Ready after ${elapsed}ms — ${result.names.length} players, chat OK`)
+                // Proceed once the count held steady for 3 consecutive
+                // polls and chat is ready
+                if (stableCount >= 2 && chatInfo) {
+                    console.log(`[DodgeTracker] Ready after ${elapsed}ms — ${result.length} players, chat OK`)
                     break
                 }
             }
         }
 
-        // Fallback: try secondary method if primary never got players
+        // Fallback: champ-select session (non-anonymized queues only)
         if (!players || players.length === 0) {
-            console.log('[DodgeTracker] Primary method timed out, trying secondary (chat API)...')
-            players = await playersInLobby()
+            console.log('[DodgeTracker] Chat participants method timed out, trying champ-select session fallback...')
+            players = await playersFromChampSelect()
         }
 
         if (!players || players.length === 0) {
@@ -286,7 +294,7 @@ async function handleChampSelect() {
             return
         }
 
-        console.log('[DodgeTracker] Players in lobby:', players)
+        console.log('[DodgeTracker] Players in lobby:', players.map(p => `${p.gameName}#${p.tagLine}`))
 
         // Retry chat info if not yet obtained
         if (!chatInfo) {
@@ -299,15 +307,26 @@ async function handleChampSelect() {
         }
 
         // --- Summoner Reveal (eye icon sidebar) ---
-        // Fire and forget — don't block DodgeTracker alerts
-        if (isSummonerRevealEnabled() && champSelectSummoners) {
+        // Fire and forget — don't block DodgeTracker alerts.
+        // players already carry real names + puuids, no summoner lookup needed.
+        if (isSummonerRevealEnabled()) {
             console.log('[DodgeTracker] Summoner Reveal enabled, starting sidebar...')
-            handleChampionSelectReveal(champSelectSummoners, chatInfo)
+            handleChampionSelectReveal(players, chatInfo)
+        }
+
+        // --- Print player names to chat (optional) ---
+        // Names only (gameName#tagLine), one message per player, like the
+        // standalone Summoner Name Reveal did — but without stats.
+        if (isPrintNamesEnabled()) {
+            console.log('[DodgeTracker] Print-names enabled, posting', players.length, 'names to chat...')
+            for (const p of players) {
+                await postMessageToChat(chatInfo.id, `${p.gameName}#${p.tagLine}`)
+            }
         }
 
         // --- DodgeTracker alerts ---
-        // Pass champ-select summoners so matching can use puuid first
-        const list = isInMyTeam(players, champSelectSummoners || [])
+        // players carry puuid directly, so matching is rename-proof
+        const list = isInMyTeam(players)
 
         if (list.length === 0) {
             console.log('[DodgeTracker] No dodged players detected in this team')

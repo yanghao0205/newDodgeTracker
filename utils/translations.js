@@ -100,6 +100,8 @@ const translations = {
         'autoDetect': 'Auto Detect',
         'summonerRevealEnabled': 'Summoner Reveal',
         'summonerRevealDesc': 'Show player stats (rank, winrate, KDA) in champ select sidebar',
+        'printNamesEnabled': 'Print player names',
+        'printNamesDesc': 'Print all detected player names to the champ select chat (names only, no stats)',
     },
     'ru_RU': {
         // UI Components
@@ -185,6 +187,8 @@ const translations = {
         'autoDetect': 'Автоопределение',
         'summonerRevealEnabled': 'Статистика игроков',
         'summonerRevealDesc': 'Показывать статистику игроков (ранг, винрейт, KDA) в боковой панели',
+        'printNamesEnabled': 'Имена игроков в чат',
+        'printNamesDesc': 'Печатать имена всех найденных игроков в чат выбора чемпионов (только имена, без статистики)',
     },
     'zh_CN': {
         // UI Components
@@ -278,6 +282,8 @@ const translations = {
         'autoDetect': '自动检测',
         'summonerRevealEnabled': '召唤师信息',
         'summonerRevealDesc': '选人阶段显示玩家战绩（段位、胜率、KDA）侧边栏',
+        'printNamesEnabled': '聊天框打印玩家名字',
+        'printNamesDesc': '选人阶段把识别到的所有玩家名字打印到聊天框（仅名字，无战绩）',
     },
     // 阿拉伯语 (ar_AE)
     'ar_AE': {
@@ -364,6 +370,8 @@ const translations = {
         'autoDetect': 'كشف تلقائي',
         'summonerRevealEnabled': 'كشف اللاعب',
         'summonerRevealDesc': 'إظهار إحصائيات اللاعب (الرتبة، نسبة الفوز، KDA) في الشريط الجانبي',
+        'printNamesEnabled': 'طباعة أسماء اللاعبين',
+        'printNamesDesc': 'طباعة أسماء جميع اللاعبين المكتشفين في دردشة اختيار الأبطال (الأسماء فقط)',
     },
     // 印尼语 (id_ID)
     'id_ID': {
@@ -450,6 +458,8 @@ const translations = {
         'autoDetect': 'Deteksi Otomatis',
         'summonerRevealEnabled': 'Reveal Summoner',
         'summonerRevealDesc': 'Tampilkan statistik pemain (rank, winrate, KDA) di sidebar',
+        'printNamesEnabled': 'Cetak nama pemain',
+        'printNamesDesc': 'Cetak nama semua pemain yang terdeteksi ke chat champion select (hanya nama, tanpa statistik)',
     },
     // 捷克语 (cs_CZ)
     'cs_CZ': {
@@ -536,6 +546,8 @@ const translations = {
         'autoDetect': 'Automatická detekce',
         'summonerRevealEnabled': 'Odhalení hráče',
         'summonerRevealDesc': 'Zobrazit statistiky hráčů (rank, winrate, KDA) v postranním panelu',
+        'printNamesEnabled': 'Vypsat jména hráčů',
+        'printNamesDesc': 'Vypsat jména všech nalezených hráčů do chatu výběru šampionů (jen jména, bez statistik)',
     },
     // 德语 (de_DE)
     'de_DE': {
@@ -622,6 +634,8 @@ const translations = {
         'autoDetect': 'Automatische Erkennung',
         'summonerRevealEnabled': 'Beschwörer-Info',
         'summonerRevealDesc': 'Spielstatistiken (Rang, Winrate, KDA) in der Seitenleiste anzeigen',
+        'printNamesEnabled': 'Spielernamen ausgeben',
+        'printNamesDesc': 'Alle erkannten Spielernamen im Championauswahl-Chat ausgeben (nur Namen, keine Statistiken)',
     },
     // 希腊语 (el_GR)
     'el_GR': {
@@ -708,6 +722,8 @@ const translations = {
         'autoDetect': 'Αυτόματος εντοπισμός',
         'summonerRevealEnabled': 'Αποκάλυψη παίκτη',
         'summonerRevealDesc': 'Εμφάνιση στατιστικών παικτών (rank, winrate, KDA) στην πλαϊνή μπάρα',
+        'printNamesEnabled': 'Εκτύπωση ονομάτων παικτών',
+        'printNamesDesc': 'Εκτύπωση όλων των ονομάτων παικτών που εντοπίστηκαν στη συνομιλία επιλογής πρωταθλητών (μόνο ονόματα)',
     },
     // Español (es_ES)
     'es_ES': {
@@ -778,6 +794,8 @@ const translations = {
         'autoDetect': 'Detección automática',
         'summonerRevealEnabled': 'Revelar invocador',
         'summonerRevealDesc': 'Mostrar estadísticas de jugadores (rango, winrate, KDA) en la barra lateral',
+        'printNamesEnabled': 'Imprimir nombres de jugadores',
+        'printNamesDesc': 'Imprimir los nombres de todos los jugadores detectados en el chat de selección de campeón (solo nombres, sin estadísticas)',
     },
     // Français (fr_FR)
     'fr_FR': {
@@ -848,6 +866,8 @@ const translations = {
         'autoDetect': 'Détection automatique',
         'summonerRevealEnabled': 'Révélation des invocateurs',
         'summonerRevealDesc': 'Afficher les statistiques des joueurs (rang, winrate, KDA) dans la barre latérale',
+        'printNamesEnabled': 'Afficher les noms des joueurs',
+        'printNamesDesc': 'Afficher les noms de tous les joueurs détectés dans le chat de sélection des champions (noms uniquement, sans stats)',
     },
     // Magyar (hu_HU)
     'hu_HU': {
@@ -918,6 +938,8 @@ const translations = {
         'autoDetect': 'Automatikus felismerés',
         'summonerRevealEnabled': 'Játékos statisztika',
         'summonerRevealDesc': 'Játékos statisztikák (rank, winrate, KDA) megjelenítése oldalsávban',
+        'printNamesEnabled': 'Játékosnevek kiírása',
+        'printNamesDesc': 'Az összes észlelt játékos nevének kiírása a champion select csevegésbe (csak nevek, statisztika nélkül)',
     },
     // Italiano (it_IT)
     'it_IT': {
@@ -988,6 +1010,8 @@ const translations = {
         'autoDetect': 'Rilevamento automatico',
         'summonerRevealEnabled': 'Rivelazione evocatore',
         'summonerRevealDesc': 'Mostra statistiche giocatori (rank, winrate, KDA) nella barra laterale',
+        'printNamesEnabled': 'Stampa nomi giocatori',
+        'printNamesDesc': 'Stampa i nomi di tutti i giocatori rilevati nella chat di selezione campioni (solo nomi, senza statistiche)',
     },
     // 日本語 (ja_JP)
     'ja_JP': {
@@ -1058,6 +1082,8 @@ const translations = {
         'autoDetect': '自動検出',
         'summonerRevealEnabled': 'サモナー情報',
         'summonerRevealDesc': 'チャンピオン選択時のサイドバーにプレイヤー戦績（ランク、勝率、KDA）を表示',
+        'printNamesEnabled': 'プレイヤー名をチャットに表示',
+        'printNamesDesc': '検出した全プレイヤー名をチャンピオン選択チャットに表示（名前のみ、戦績なし）',
     },
     // 한국어 (ko_KR)
     'ko_KR': {
@@ -1128,6 +1154,8 @@ const translations = {
         'autoDetect': '자동 감지',
         'summonerRevealEnabled': '소환사 정보',
         'summonerRevealDesc': '챔피언 선택 시 사이드바에 플레이어 전적(랭크, 승률, KDA) 표시',
+        'printNamesEnabled': '플레이어 이름 출력',
+        'printNamesDesc': '감지된 모든 플레이어의 이름을 챔피언 선택 채팅에 출력 (이름만, 전적 없음)',
     },
     // Polski (pl_PL)
     'pl_PL': {
@@ -1198,6 +1226,8 @@ const translations = {
         'autoDetect': 'Automatyczne wykrywanie',
         'summonerRevealEnabled': 'Statystyki graczy',
         'summonerRevealDesc': 'Pokaż statystyki graczy (rank, winrate, KDA) w panelu bocznym',
+        'printNamesEnabled': 'Wypisz nazwy graczy',
+        'printNamesDesc': 'Wypisz nazwy wszystkich wykrytych graczy na czacie wyboru bohatera (tylko nazwy, bez statystyk)',
     },
     // Português (pt_BR)
     'pt_BR': {
@@ -1268,6 +1298,8 @@ const translations = {
         'autoDetect': 'Detecção automática',
         'summonerRevealEnabled': 'Revelar invocador',
         'summonerRevealDesc': 'Mostrar estatísticas de jogadores (rank, winrate, KDA) na barra lateral',
+        'printNamesEnabled': 'Imprimir nomes dos jogadores',
+        'printNamesDesc': 'Imprimir os nomes de todos os jogadores detectados no chat da seleção de campeões (somente nomes, sem estatísticas)',
     },
     // Română (ro_RO)
     'ro_RO': {
@@ -1338,6 +1370,8 @@ const translations = {
         'autoDetect': 'Detectare automată',
         'summonerRevealEnabled': 'Informații jucători',
         'summonerRevealDesc': 'Afișează statisticile jucătorilor (rank, winrate, KDA) în bara laterală',
+        'printNamesEnabled': 'Afișează numele jucătorilor',
+        'printNamesDesc': 'Afișează numele tuturor jucătorilor detectați în chatul de selectare a campionilor (doar nume, fără statistici)',
     },
     // ภาษาไทย (th_TH)
     'th_TH': {
@@ -1408,6 +1442,8 @@ const translations = {
         'autoDetect': 'ตรวจจับอัตโนมัติ',
         'summonerRevealEnabled': 'ข้อมูลผู้เล่น',
         'summonerRevealDesc': 'แสดงสถิติผู้เล่น (แรงก์, อัตราชนะ, KDA) ในแถบด้านข้าง',
+        'printNamesEnabled': 'พิมพ์ชื่อผู้เล่น',
+        'printNamesDesc': 'พิมพ์ชื่อผู้เล่นที่ตรวจพบทั้งหมดไปยังแชทเลือกแชมเปี้ยน (เฉพาะชื่อ ไม่มีสถิติ)',
     },
     // Türkçe (tr_TR)
     'tr_TR': {
@@ -1478,6 +1514,8 @@ const translations = {
         'autoDetect': 'Otomatik algıla',
         'summonerRevealEnabled': 'Sihildar Bilgisi',
         'summonerRevealDesc': 'Oyuncu istatistiklerini (rank, winrate, KDA) yan panelde göster',
+        'printNamesEnabled': 'Oyuncu adlarını yazdır',
+        'printNamesDesc': 'Tespit edilen tüm oyuncu adlarını şampiyon seçimi sohbetine yazdır (yalnızca adlar, istatistik yok)',
     },
     // Tiếng Việt (vi_VN)
     'vi_VN': {
@@ -1548,6 +1586,8 @@ const translations = {
         'autoDetect': 'Tự động phát hiện',
         'summonerRevealEnabled': 'Thông tin người chơi',
         'summonerRevealDesc': 'Hiển thị thống kê người chơi (rank, winrate, KDA) ở thanh bên',
+        'printNamesEnabled': 'In tên người chơi',
+        'printNamesDesc': 'In tên tất cả người chơi được phát hiện vào khung chat chọn tướng (chỉ tên, không có thông số)',
     },
     // 中文（马来西亚） (zh_MY)
     'zh_MY': {
@@ -1626,6 +1666,8 @@ const translations = {
         'autoDetect': '自动检测',
         'summonerRevealEnabled': '召唤师信息',
         'summonerRevealDesc': '选人阶段显示玩家战绩（段位、胜率、KDA）侧边栏',
+        'printNamesEnabled': '聊天框打印玩家名字',
+        'printNamesDesc': '选人阶段把识别到的所有玩家名字打印到聊天框（仅名字，无战绩）',
     },
     // 繁體中文 (zh_TW)
     'zh_TW': {
@@ -1696,6 +1738,8 @@ const translations = {
         'autoDetect': '自動偵測',
         'summonerRevealEnabled': '召喚師資訊',
         'summonerRevealDesc': '選人階段顯示玩家戰績（段位、勝率、KDA）側邊欄',
+        'printNamesEnabled': '聊天框列印玩家名字',
+        'printNamesDesc': '選人階段把識別到的所有玩家名字列印到聊天框（僅名字，無戰績）',
     },
 };
 
